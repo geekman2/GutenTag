@@ -10,11 +10,26 @@ import simplejson
 
 
 class Crawler:
-    def __init__(self, seed_url):
+    def __init__(self, domain, seed_page):
         self.crawled = set()
-        self.to_crawl = set()
-        self.seed_url = seed_url
-        self.page_raw = requests.get(self.seed_url).text
+        self.to_crawl = []
+        self.absolute_prepend = "https://www."
+        self.domain = domain
+        self.seed_page = seed_page
+        self.seed_url = "{protocol}{domain}/{page}".format(protocol=self.absolute_prepend,
+                                                           domain=self.domain,
+                                                           page=seed_page)
+        self.page_raw = self.get_body(self.seed_url)
+        self.domain_criteria = {
+            "fanfiction.net/anime/Seto-no-Hanayome": "/s/"
+        }
+
+    def get_body(self, url):
+        page = requests.get(url).text
+        head_end = page.find("/head")
+        body = page[head_end:]
+        body = body.replace("'", "\"")
+        return body
 
     @staticmethod
     def get_next_target(page):
@@ -27,8 +42,8 @@ class Crawler:
         #TODO fix link gathering so that both absolute and relative links are scraped correctly
         link_start = page.find("href=")
         if link_start > -1:
-            link_end = page.find('">', link_start + 7)
-            link_text = page[link_start + 5:link_end]
+            link_end = page.find('"', link_start + 7)
+            link_text = page[link_start + 6:link_end]
             return link_text, link_end
         else:
             return None, None
@@ -42,40 +57,32 @@ class Crawler:
         links = []
         url, end_position = self.get_next_target(page)
         while url:
-            if self.is_story(url) or self.is_page_link(url):
-                links.append(url)
+            if self.is_valid_link(url) and url not in self.crawled:
+                link = self.absolute_prepend+self.domain+url
+                links.append(link)
             page = page[end_position:]
             url, end_position = self.get_next_target(page)
         return links
 
-    @staticmethod
-    def is_story(url):
-        """
-        Check the url of a given story against a set of predefined patterns
-        if it matches one of the patterns, return true, otherwise, return false
-        """
-        if "fanfiction.com" in url and "/s/" in url:
-            return True
-        else:
-            return False
 
-    @staticmethod
-    def is_page_link(url):
+    def is_valid_link(self,url):
         """
         Check the url against a set of predefined patterns for page links
         if it matches one of the patterns, return true, otherwise, return
         """
-        if "&p=" in url:
+        criterion = self.domain_criteria[self.domain]
+        if url.startswith(criterion):
             return True
         else:
             return False
 
     def start_crawl(self):
         #Add a starting set of pages to the to_crawl list
-        self.to_crawl.update(self.get_all_links(self.page_raw))
+        self.to_crawl.extend(self.get_all_links(self.page_raw))
         for url_to_crawl in self.to_crawl:
-            page_to_crawl = requests.get(url_to_crawl).text
-            self.to_crawl.update(self.get_all_links(page_to_crawl))
+            page_to_crawl = self.get_body(url_to_crawl)
+            self.to_crawl.extend(self.get_all_links(page_to_crawl))
+            print self.crawled
             self.crawled.add(url_to_crawl)
 
-Crawler("https://www.fanfiction.net/anime/Seto-no-Hanayome/").start_crawl()
+Crawler("fanfiction.net/anime/Seto-no-Hanayome", "").start_crawl()
