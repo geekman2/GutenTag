@@ -44,20 +44,7 @@ class FanfictionSpider(CrawlSpider):
         """
         logging.info("Page Parse started")
         titles = response.xpath('//a[@class="stitle"]')
-        title = titles[0]
-        item = items.MonkPageItem()
-        title_text = title.xpath('text()').extract()[0]
-        title_url = response.urljoin(title.xpath('@href').extract()[0])
-        logging.info("Current URL:{}".format(title_url))
-        item['title'] = title_text
-        item['url'] = title_url
-        request = scrapy.Request(url=title_url,
-                                 callback=self.parse_story_page)
-        request.meta['item'] = item
-        return request
-        #debugging, only parsing one page
-        """
-            for title in titles:
+        for title in titles:
             item = items.MonkPageItem()
             title_text = title.xpath('text()').extract()[0]
             title_url = response.urljoin(title.xpath('@href').extract()[0])
@@ -68,7 +55,7 @@ class FanfictionSpider(CrawlSpider):
                                      callback=self.parse_story_page)
             request.meta['item'] = item
             yield request
-        """
+
 
     def parse_story_page(self, response):
         """
@@ -79,7 +66,7 @@ class FanfictionSpider(CrawlSpider):
         item = items.MonkStoryItem()
         n_grams = {}
         n_gram_frequencies = {}
-        text = "".join(response.xpath('//*[@id="storytext"]//text()').extract()).strip()[:100000]
+        text = "".join(response.xpath('//*[@id="storytext"]//text()').extract()).strip()
         logging.debug("Length of text:{}".format(len(text)))
         for ngram in self.generate_ngrams(text, 3):
             if ngram in n_grams:
@@ -88,7 +75,6 @@ class FanfictionSpider(CrawlSpider):
                 n_grams[ngram] = 1
         for key in n_grams:
             n_gram_frequencies[key] = float(n_grams[key]) / len(text)
-            logging.debug("Length of Text:{}".format(len(text)))
         item["trigram_frequency"] = n_gram_frequencies  # n_grams
         yield item
 
