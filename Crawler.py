@@ -24,7 +24,8 @@ class Crawler:
             "fanfiction.net/anime/Seto-no-Hanayome": "/s/"
         }
 
-    def get_body(self, url):
+    @staticmethod
+    def get_body(url):
         page = requests.get(url).text
         head_end = page.find("/head")
         body = page[head_end:]
@@ -39,7 +40,7 @@ class Crawler:
         :return : link_text:the text of the first link it finds
         link_end: the index where link_text ends
         """
-        #TODO fix link gathering so that both absolute and relative links are scraped correctly
+        # TODO fix link gathering so that both absolute and relative links are scraped correctly
         link_start = page.find("href=")
         if link_start > -1:
             link_end = page.find('"', link_start + 7)
@@ -58,17 +59,17 @@ class Crawler:
         url, end_position = self.get_next_target(page)
         while url:
             if self.is_valid_link(url) and url not in self.crawled:
-                link = self.absolute_prepend+self.domain+url
+                link = self.absolute_prepend + self.domain + url
                 links.append(link)
             page = page[end_position:]
             url, end_position = self.get_next_target(page)
         return links
 
-
-    def is_valid_link(self,url):
+    def is_valid_link(self, url):
         """
         Check the url against a set of predefined patterns for page links
         if it matches one of the patterns, return true, otherwise, return
+        :param url:
         """
         criterion = self.domain_criteria[self.domain]
         if url.startswith(criterion):
@@ -77,12 +78,13 @@ class Crawler:
             return False
 
     def start_crawl(self):
-        #Add a starting set of pages to the to_crawl list
+        # Add a starting set of pages to the to_crawl list
         self.to_crawl.extend(self.get_all_links(self.page_raw))
         for url_to_crawl in self.to_crawl:
             page_to_crawl = self.get_body(url_to_crawl)
             self.to_crawl.extend(self.get_all_links(page_to_crawl))
             print self.crawled
             self.crawled.add(url_to_crawl)
+
 
 Crawler("fanfiction.net/anime/Seto-no-Hanayome", "").start_crawl()
