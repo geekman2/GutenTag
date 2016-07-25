@@ -16,6 +16,11 @@ NEWSPIDER_MODULE = 'Monk.spiders'
 
 DOWNLOAD_HANDLERS = {'s3': None,}
 
+AUTOTHROTTLE_ENABLED = True
+AUTOTHROTTLE_TARGET_CONCURRENCY = 5.0
+
+LOG_LEVEL = 'INFO'
+
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 # USER_AGENT = 'Monk (+http://www.yourdomain.com)'
 
