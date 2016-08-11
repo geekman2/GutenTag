@@ -13,28 +13,23 @@ import scrapy
 import logging
 import datetime
 from Monk import items
-import logging
-
-
-# logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
-# file_handler = logging.FileHandler("crawl.log")
-# formatter = logging.Formatter()
 
 
 class FanfictionSpider(CrawlSpider):
     name = "fanfiction_spider"
     allowed_domains = ["fanfiction.net"]
     start_urls = [
-        "http://m.fanfiction.net/"
+        "https://m.fanfiction.net/book",
+        "https://m.fanfiction.net/book/Percy-Jackson-and-the-Olympians/",
+        "https://m.fanfiction.net/tv/Chuck/",
+        "https://m.fanfiction.net/anime/Fullmetal-Alchemist/"
+
     ]
     rules = [
         Rule(LinkExtractor(allow=[r'.*'],
-                           deny=[r'communities', r'.php', r'/r/', r'/u/',r'/forum/']),
-             callback="parse_story_page", follow=True),
+                           deny=[r'communities', r'.php', r'/r/', r'/u/',r'/forum/',r'crossover']),
+             callback="parse_page", follow=True),
     ]
-    logging.basicConfig(filename=datetime.datetime.now().strftime('crawl_%H_%M_%d_%m_%Y.log'),
-                        format='[%(asctime)s]%(levelname)s: %(message)s')
 
     def parse_page(self, response):
         """
@@ -68,6 +63,10 @@ class FanfictionSpider(CrawlSpider):
         n_gram_frequencies = {}
         # text = "".join(response.xpath('//*[@id="storytext"]//text()').extract()).strip()
         text = "".join(response.xpath('//*[@id="storycontent"]//text()').extract()).strip()
+        fandom = response.xpath('//*[@id="content"]/a[2]//text()').extract()
+        if type(fandom) == list:
+            fandom = "".join(fandom)
+        info = response.xpath('//*[@id="content"]//text()').extract()
         for ngram in self.generate_ngrams(text, 3):
             if ngram in n_grams:
                 n_grams[ngram] += 1
@@ -76,10 +75,28 @@ class FanfictionSpider(CrawlSpider):
         for key in n_grams:
             n_gram_frequencies[key] = float(n_grams[key]) / len(text)
         item["url"] = response.url
+        item["fandom"] = fandom
+        item["genres"] = self.parse_genre(info)
+        item["text"] = text
         item["trigram_frequency"] = n_gram_frequencies  # n_grams
         yield item
 
     @staticmethod
     def generate_ngrams(text, n):
+        text = text.replace(".","*")
+        text = text.replace("$","^")
         for i in xrange(len(text) - n):
             yield text[i:i + n]
+
+    def parse_genre(self,lst):
+        valid_genres = ["Adventure","Angst","Crime","Drama","Family","Fantasy","Friendship","General","Horror","Humor",
+                        "Hurt/Comfort","Mystery","Parody","Poetry","Romance","Sci-Fi","Spiritual","Supernatural",
+                        "Suspense","Tragedy","Western"]
+        for i in lst:
+            if "Rated:" in i:
+                genre = i.split(",")[2]
+                if any(word in genre for word in valid_genres):
+                    if "&" in genre:
+                        return genre.split(" & ")
+                    else:
+                        return [genre]
