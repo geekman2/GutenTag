@@ -16,13 +16,12 @@ NEWSPIDER_MODULE = 'Monk.spiders'
 
 DOWNLOAD_HANDLERS = {'s3': None,}
 
-AUTOTHROTTLE_ENABLED = True
-AUTOTHROTTLE_TARGET_CONCURRENCY = 5.0
-
 LOG_LEVEL = 'INFO'
+LOG_FILE = 'ficton_crawl.log'
+LOG_STDOUT = True
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-# USER_AGENT = 'Monk (+http://www.yourdomain.com)'
+#USER_AGENT = 'Monk (+http://www.fanaticsdomain.com)'
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # CONCURRENT_REQUESTS=32
@@ -32,7 +31,7 @@ LOG_LEVEL = 'INFO'
 # See also autothrottle settings and docs
 # DOWNLOAD_DELAY=3
 # The download delay setting will honor only one of:
-# CONCURRENT_REQUESTS_PER_DOMAIN=16
+CONCURRENT_REQUESTS_PER_DOMAIN=16
 # CONCURRENT_REQUESTS_PER_IP=16
 
 # Disable cookies (enabled by default)
@@ -67,18 +66,22 @@ LOG_LEVEL = 'INFO'
 
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
-# ITEM_PIPELINES = {
-#    'Monk.pipelines.SomePipeline': 300,
-# }
+ITEM_PIPELINES = ['Monk.pipelines.MonkPipeline', ]
+
+MONGODB_SERVER = "159.203.187.28"
+MONGODB_PORT = 27017
+MONGODB_DB = "data"
+MONGODB_COLLECTION = "fiction"
+
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html
 # NOTE: AutoThrottle will honour the standard settings for concurrency and delay
-# AUTOTHROTTLE_ENABLED=True
+AUTOTHROTTLE_ENABLED=True
 # The initial download delay
-# AUTOTHROTTLE_START_DELAY=5
+AUTOTHROTTLE_START_DELAY=5
 # The maximum download delay to be set in case of high latencies
-# AUTOTHROTTLE_MAX_DELAY=60
+AUTOTHROTTLE_MAX_DELAY=60
 # Enable showing throttling stats for every response received:
 # AUTOTHROTTLE_DEBUG=False
 
