@@ -26,14 +26,12 @@ def getText(doc):
 def filterLang(doc):
     text = getText(doc)
     if not getLang(text):
-        print(doc['_id'])
+        return doc['_id']
 
 
 if __name__ == '__main__':
     cur = getCursor()
-    for i in range(0, 1000):
-        item = cur.__getitem__(i)
-        filterLang(item)
-        # parsed = tokenize(getText(item))
-        # for j in parsed[:10]:
-        #    print j
+    nonEng = []
+    for item in cur:
+        nonEng.append(filterLang(item))
+    nonEng = [item for item in nonEng if item is not None]
