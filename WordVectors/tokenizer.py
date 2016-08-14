@@ -8,30 +8,36 @@
 # ------------------------------------------------------------------------------
 from __future__ import print_function
 from pymongo import MongoClient
-from lnFilter import getLang
+from lnFilter import is_english_nltk,is_english_langid
+import time
+import multiprocessing
 
+db_ip='159.203.187.28'
+db_port='27017'
+db = MongoClient('mongodb://{}:{}'.format(db_ip,db_port))
+docs = db.data.fiction
 
-def getCursor(ip="159.203.187.28", port="27017"):
-    # get a cursor object to iterate over
-    db = MongoClient('mongodb://{}:{}'.format(ip, port))
-    docs = db.data.fiction
-    return docs.find({'text': {'$exists': 'true'}}, {'text': 1})
-
-
-def getText(doc):
-    # return the text from the resulting document
-    return doc['text']
-
-
-def filterLang(doc):
-    text = getText(doc)
-    if not getLang(text):
+def not_english(doc):
+    text = doc['text']
+    if not is_english_nltk(text):
         return doc['_id']
 
+def worker(item):
+    _id = not_english(item)
+    if _id:
+        docs.remove({'_id':{'$in':[_id]}})
+
+def remove_non_english():
+    start = time.time()
+    cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    nonEng = []
+    pool = multiprocessing.Pool(8)
+    pool.map_async(worker,cur)
+    pool.close()
+    pool.join()
+    print(docs.count())
+    print("TOTAL RUNTIME:{}".format(time.time()-start))
 
 if __name__ == '__main__':
-    cur = getCursor()
-    nonEng = []
-    for item in cur:
-        nonEng.append(filterLang(item))
-    nonEng = [item for item in nonEng if item is not None]
+    print("START COUNT:{}".format(docs.count()))
+    remove_non_english()

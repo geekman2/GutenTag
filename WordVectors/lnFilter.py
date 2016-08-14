@@ -23,15 +23,15 @@ STOPWORDS_DICT = {lang: set(nltk.corpus.stopwords.words(lang))
                   }
 
 
-def isEnglish(text):
+def is_english_nltk(text):
     # Identify the lanugage using the NLTK implementation.
     text = text.lower()  # convert to lowercase
     words = set(nltk.wordpunct_tokenize(text))
     return len(words & ENGLISH_STOPWORDS) > len(words & NON_ENGLISH_STOPWORDS)
 
 
-def getLang(text):
-    # Identify anguage using langid
+def is_english_langid(text):
+    # Identify language using langid
     text = text.lower()
     lang = langid.classify(text)
     return lang[0] == 'en'
@@ -45,4 +45,4 @@ if __name__ == '__main__':
 
     for item in [test1, test2, test3, test4, test5]:
         # print isEnglish(item)
-        print(getLang(item))
+        print(is_english_langid(item))
