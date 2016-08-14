@@ -6,9 +6,9 @@
 # Created:      08/12/2016
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
-from __future__ import print_function, absolute_import 
+from __future__ import print_function, absolute_import
 import pymongo
-import lnFilter
+import WordVectors.lnFilter
 import multiprocessing
 # import time #UNCOMMENT FOR DEBUGGING
 
@@ -22,7 +22,7 @@ docs = db.data.fiction
 def notEnglish(doc):
     # Ids the documents that are non-English
     text = doc['text']
-    if not lnFilter.isEnglishNltk(text):
+    if not WordVectors.lnFilter.isEnglishNltk(text):
         return doc['_id']
 
 
