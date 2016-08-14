@@ -7,18 +7,28 @@
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
 from __future__ import print_function
-# from spacy.en import English
-from nltk import wordpunct_tokenize
+import nltk
+import multiprocessing
 import tokenizer
 
 
-def tokenize(doc, parser=wordpunct_tokenize):
+def tokenize(text, parser=nltk.wordpunct_tokenize):
     # Intialize the parser and tokenize the text retrieved
-    return parser(doc.lower())
+    return parser(text.lower())
 
 
-cur = tokenizer.getCursor()
-tokenedDocs = []
-for item in cur[:1000]:
-    tokenedDocs.append(tokenize(tokenizer.getText(item)))
-print(len(tokenedDocs))
+def worker(doc):
+    parsed = tokenize(doc['text'])
+    tokenizer.docs.update({'_id': doc['_id']},
+                          {'$set': {'tokenedText': parsed}})
+
+
+def tokenizeMultiple():
+    cur = tokenizer.docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    pool = multiprocessing.Pool(8)
+    pool.map_async(worker, cur)
+    pool.close()
+    pool.join()
+
+if __name__ == '__main__':
+    tokenizeMultiple()
