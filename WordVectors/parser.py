@@ -1,47 +1,36 @@
 # coding = utf-8
 # ------------------------------------------------------------------------------
 # Name:         parser.py
-# Purpose:      Read data from MongoDb and tokenize using spacy
-# Author:       Bharat Ramanathan, Devon Muraoka
-# Created:      08/12/2016
-# Copyright:    (c) Bharat Ramanathan , Devon Muraoka
+# Purpose:      Parse and tokenize english text using spaCy
+# Author:       Bharat Ramanathan
+# Created:      08/14/2016
+# Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
 from __future__ import print_function
-from pymongo import MongoClient
-from lnFilter import isEnglishNltk
-import time
+import nltk
 import multiprocessing
-
-# Necessary connection variables.
-db_ip = '159.203.187.28'
-db_port = '27017'
-db = MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
-docs = db.data.fiction
+import tokenizer
 
 
-def notEnglish(doc):
-    # Ids the documents that are non-English
-    text = doc['text']
-    if not isEnglishNltk(text):
-        return doc['_id']
+def tokenize(text, parser=nltk.wordpunct_tokenize):
+    # Intialize the parser and tokenize the text retrieved
+    return parser(text.lower())
 
 
-def worker(item):
-    _id = notEnglish(item)
-    if _id:
-        docs.remove({'_id': {'$in': [_id]}})
+def worker(doc):
+    # Get the parsed data and update the document with tokenedText
+    parsed = tokenize(doc['text'])
+    tokenizer.docs.update({'_id': doc['_id']},
+                          {'$set': {'tokenedText': parsed}})
 
 
-def removeNonEnglish():
-    start = time.time()
-    cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+def tokenizeMultiple():
+    # Multiprocessing-fu with the tokenization
+    cur = tokenizer.docs.find({'text': {'$exists': 'true'}}, {'text': 1})
     pool = multiprocessing.Pool(8)
     pool.map_async(worker, cur)
     pool.close()
     pool.join()
-    print(docs.count())
-    print("TOTAL RUNTIME:{}".format(time.time()-start))
 
 if __name__ == '__main__':
-    print("START COUNT:{}".format(docs.count()))
-    removeNonEnglish()
+    tokenizeMultiple()
