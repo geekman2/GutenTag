@@ -24,14 +24,20 @@ def getText(doc):
 
 
 def filterLang(doc):
+    # find and return id for those documents that are non-english
     text = getText(doc)
     if not getLang(text):
         return doc['_id']
 
 
-if __name__ == '__main__':
-    cur = getCursor()
+def getNonEnglish(cur):
     nonEng = []
-    for item in cur:
+    for item in cur[:10000]:
         nonEng.append(filterLang(item))
     nonEng = [item for item in nonEng if item is not None]
+    return nonEng
+
+if __name__ == '__main__':
+    cur = getCursor()
+    nonEngs = getNonEnglish(cur)
+    print(nonEngs)

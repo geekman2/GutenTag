@@ -6,9 +6,19 @@
 # Created:      08/13/2016
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
-from spacy.en import English
+from __future__ import print_function
+# from spacy.en import English
+from nltk import wordpunct_tokenize
+import tokenizer
 
 
-def tokenize(doc, parser=English()):
+def tokenize(doc, parser=wordpunct_tokenize):
     # Intialize the parser and tokenize the text retrieved
-    return parser(doc)
+    return parser(doc.lower())
+
+
+cur = tokenizer.getCursor()
+tokenedDocs = []
+for item in cur[:1000]:
+    tokenedDocs.append(tokenize(tokenizer.getText(item)))
+print(len(tokenedDocs))
