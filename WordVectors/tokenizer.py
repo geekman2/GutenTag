@@ -12,7 +12,7 @@ from lnFilter import isEnglishNltk
 import time
 import multiprocessing
 
-
+# Necessary connection variables.
 db_ip = '159.203.187.28'
 db_port = '27017'
 db = MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
@@ -20,6 +20,7 @@ docs = db.data.fiction
 
 
 def notEnglish(doc):
+    # Ids the documents that are non-English
     text = doc['text']
     if not isEnglishNltk(text):
         return doc['_id']
@@ -31,7 +32,7 @@ def worker(item):
         docs.remove({'_id': {'$in': [_id]}})
 
 
-def removeNonEnglish()
+def removeNonEnglish():
     start = time.time()
     cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
     pool = multiprocessing.Pool(8)
