@@ -21,13 +21,15 @@ def worker(doc):
     # Get the parsed data and update the document with tokenedText
     parsed = tokenize(doc['text'])
     WordVectors.parser.docs.update_one({'_id': doc['_id']},
-                                       {'$set': {'tokenedText': parsed},})   #DELETE THIS BRACE
-                                        #'$unset':{'text':''}}) UNCOMMENTING WILL DELET THE TEXT FIELD
+                                       {'$set': {'tokenedText': parsed}, })
+# DELETE THIS BRACE
+# '$unset':{'text':''}}) UNCOMMENTING WILL DELETE THE TEXT FIELD
 
 
 def tokenizeMultiple():
     # Multiprocessing-fu with the tokenization
-    cur = WordVectors.parser.docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    cur = WordVectors.parser.docs.find({'text': {'$exists': 'true'}},
+                                       {'text': 1})
     pool = multiprocessing.Pool(8)
     pool.map_async(worker, cur[:100])
     pool.close()

@@ -6,7 +6,7 @@
 # Created:      08/12/2016
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
-from __future__ import print_function
+from __future__ import print_function, absolute_import 
 import pymongo
 import lnFilter
 import multiprocessing

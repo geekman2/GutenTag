@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 from __future__ import absolute_import
 import unittest
-import wordVectors.lnFilter as lnFilter
+import WordVectors.lnFilter as lnFilter
 
 
 class TestlnFilter(unittest.TestCase):
