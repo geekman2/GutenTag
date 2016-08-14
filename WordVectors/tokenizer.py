@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 from __future__ import print_function
 from pymongo import MongoClient
-from lnFilter import is_english_nltk
+from lnFilter import isEnglishNltk
 import time
 import multiprocessing
 
@@ -19,19 +19,19 @@ db = MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
 docs = db.data.fiction
 
 
-def not_english(doc):
+def notEnglish(doc):
     text = doc['text']
-    if not is_english_nltk(text):
+    if not isEnglishNltk(text):
         return doc['_id']
 
 
 def worker(item):
-    _id = not_english(item)
+    _id = notEnglish(item)
     if _id:
         docs.remove({'_id': {'$in': [_id]}})
 
 
-def remove_non_english():
+def removeNonEnglish()
     start = time.time()
     cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
     pool = multiprocessing.Pool(8)
@@ -43,4 +43,4 @@ def remove_non_english():
 
 if __name__ == '__main__':
     print("START COUNT:{}".format(docs.count()))
-    remove_non_english()
+    removeNonEnglish()
