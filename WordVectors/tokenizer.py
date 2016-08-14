@@ -7,15 +7,13 @@
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-import spacy
 from spacy.en import English
 import multiprocessing
 import WordVectors.parser
 
 
-def tokenize(texts, parser=spacy.en.English()):
+def tokenize(texts, nlp=English()):
     # Intialize the parser and tokenize the text retrieved
-    nlp = English()
     for doc in nlp.pipe(texts, n_threads=16):
         sentences = []
         for span in doc.sents:
@@ -23,11 +21,11 @@ def tokenize(texts, parser=spacy.en.English()):
             sentences.append(sent)
         yield sentences
 
+
 def chunks(cursor, n):
-    #Yield successive n-sized chunks from ls
+    # Yield successive n-sized chunks from ls
     for i in xrange(0, 100, n):
         yield [x['text'] for x in cursor[i:i + n]]
-
 
 
 def worker(docChunk):
@@ -46,7 +44,7 @@ def tokenizeMultiple():
     cur = WordVectors.parser.docs.find({'text': {'$exists': 'true'}},
                                        {'text': 1})
     pool = multiprocessing.Pool(8)
-    map(worker, chunks(cur[:100],10))
+    map(worker, chunks(cur[:100], 10))
     pool.close()
     pool.join()
 
