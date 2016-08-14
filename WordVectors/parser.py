@@ -18,12 +18,14 @@ def tokenize(text, parser=nltk.wordpunct_tokenize):
 
 
 def worker(doc):
+    # Get the parsed data and update the document with tokenedText
     parsed = tokenize(doc['text'])
     tokenizer.docs.update({'_id': doc['_id']},
                           {'$set': {'tokenedText': parsed}})
 
 
 def tokenizeMultiple():
+    # Multiprocessing-fu with the tokenization
     cur = tokenizer.docs.find({'text': {'$exists': 'true'}}, {'text': 1})
     pool = multiprocessing.Pool(8)
     pool.map_async(worker, cur)
