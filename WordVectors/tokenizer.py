@@ -21,8 +21,8 @@ def worker(doc):
     # Get the parsed data and update the document with tokenedText
     parsed = tokenize(doc['text'])
     WordVectors.parser.docs.update_one({'_id': doc['_id']},
-                                       {'$set': {'tokenedText': parsed},
-                                        '$unset':{'text':''}})
+                                       {'$set': {'tokenedText': parsed},})   #DELETE THIS BRACE
+                                        #'$unset':{'text':''}}) UNCOMMENTING WILL DELET THE TEXT FIELD
 
 
 def tokenizeMultiple():
