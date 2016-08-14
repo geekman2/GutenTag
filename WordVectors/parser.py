@@ -9,8 +9,8 @@
 from __future__ import print_function
 import pymongo
 import lnFilter
-# import time - add for debugging infor
 import multiprocessing
+# import time #UNCOMMENT FOR DEBUGGING
 
 # Necessary connection variables.
 db_ip = '159.203.187.28'
