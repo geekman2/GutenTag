@@ -2,9 +2,9 @@
 # ------------------------------------------------------------------------------
 # Name:         lnFilter.py
 # Purpose:      Rundimentary language filter for text based on stopwords
-# Author:       Bharat Ramanathan
+# Author:       Bharat Ramanathan, Devon Muraoka
 # Created:      08/13/2016
-# Copyright:    (c) Bharat Ramanathan
+# Copyright:    (c) Bharat Ramanathan, Devon Muraoka
 # ------------------------------------------------------------------------------
 from __future__ import print_function
 import nltk
