@@ -7,41 +7,46 @@
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
 from __future__ import print_function
-from pymongo import MongoClient
-from lnFilter import isEnglishNltk
-import time
+import pymongo
+import lnFilter
+# import time - add for debugging infor
 import multiprocessing
 
 # Necessary connection variables.
 db_ip = '159.203.187.28'
 db_port = '27017'
-db = MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
+db = pymongo.MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
 docs = db.data.fiction
 
 
 def notEnglish(doc):
     # Ids the documents that are non-English
     text = doc['text']
-    if not isEnglishNltk(text):
+    if not lnFilter.isEnglishNltk(text):
         return doc['_id']
 
 
 def worker(item):
+    # Filter through the documents and
+    # remove those documents that have non-English text.
     _id = notEnglish(item)
     if _id:
         docs.remove({'_id': {'$in': [_id]}})
 
 
 def removeNonEnglish():
-    start = time.time()
+    # Multiprocessing-fu with the non-English filter.
+    # start = time.time() (uncomment for debugging-info)
     cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
     pool = multiprocessing.Pool(8)
     pool.map_async(worker, cur)
     pool.close()
     pool.join()
-    print(docs.count())
-    print("TOTAL RUNTIME:{}".format(time.time()-start))
+    # uncomment the below lines for debugging info
+    # print(docs.count())
+    # print("TOTAL RUNTIME:{}".format(time.time()-start))
 
 if __name__ == '__main__':
-    print("START COUNT:{}".format(docs.count()))
+    # uncomment the below lines for debugging info
+    # print("START COUNT:{}".format(docs.count()))
     removeNonEnglish()
