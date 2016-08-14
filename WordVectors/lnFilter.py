@@ -6,7 +6,7 @@
 # Created:      08/13/2016
 # Copyright:    (c) Bharat Ramanathan, Devon Muraoka
 # ------------------------------------------------------------------------------
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import nltk
 import langid
 
