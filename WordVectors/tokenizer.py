@@ -7,42 +7,35 @@
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-import spacy
+import parser
 from spacy.en import English
-import multiprocessing
-import WordVectors.parser
+from time import time
+from itertools import izip
 
 
-def tokenize(texts, parser=spacy.en.English()):
-    # Intialize the parser and tokenize the text retrieved
+def getText(cur):
+    for item in cur:
+        yield item['text'], item['_id']
+
+
+def tokenize(texts, parser=English()):
     for doc in parser.pipe(texts, n_threads=16):
-        sentences = []
-        for span in doc.sents:
-            sent = [token.text for token in span]
-            sentences.append(sent)
-        yield sentences
+        yield [token.text for token in doc]
 
 
+def writeText(cur):
+    texts, ids = izip(*getText(cur))
+    for text, ids in izip(tokenize(texts), ids):
+        # print(text, ids) # - Uncomment for debug info.
+        # parser.docs.update_one({'_id': doc['_id']},
+        #                       {'$set': {'tokenedText': parsedList}})
+        # DELETE THIS BRACE
+        # '$unset':{'text':''}}) UNCOMMENTING WILL DELETE THE TEXT FIELD
 
-def worker(doc):
-    # Get the parsed data and update the document with tokenedText
-    tokenizer = spacy.en.English()
-    parsedText = tokenizer(doc['text'])
-    parsedList = list((parsedText))
-    WordVectors.parser.docs.update_one({'_id': doc['_id']},
-                                       {'$set': {'tokenedText': parsedList}, })
-# DELETE THIS BRACE
-# '$unset':{'text':''}}) UNCOMMENTING WILL DELETE THE TEXT FIELD
-
-
-def tokenizeMultiple():
-    # Multiprocessing-fu with the tokenization
-    cur = WordVectors.parser.docs.find({'text': {'$exists': 'true'}},
-                                       {'text': 1})
-    pool = multiprocessing.Pool(8)
-    map(worker, cur[:1])
-    pool.close()
-    pool.join()
 
 if __name__ == '__main__':
-    tokenizeMultiple()
+    data = parser.docs
+    cur = data.find({'text': {'$exists': 'true'}}, {'text': 1})
+    start = time()
+    writeText(cur[:10000])
+    print(time()-start)
