@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
 import pymongo
-import WordVectors.lnFilter
+import lnFilter
 import multiprocessing
 # import time #UNCOMMENT FOR DEBUGGING
 
