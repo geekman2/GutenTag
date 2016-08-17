@@ -7,8 +7,7 @@
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-# import parser
-from var.mongoSim import simMongoDb
+import parser
 from spacy.en import English
 from time import time
 from itertools import izip
@@ -36,9 +35,8 @@ def writeText(cur):
 
 
 if __name__ == '__main__':
-    # data = parser.docs
-    # cur = data.find({'text': {'$exists': 'true'}}, {'text': 1})
-    data = simMongoDb(1, array=False)
+    data = parser.docs
+    cur = data.find({'text': {'$exists': 'true'}}, {'text': 1})
     start = time()
-    writeText(data)
+    writeText(cur)
     print(time()-start)
