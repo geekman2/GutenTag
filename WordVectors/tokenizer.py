@@ -20,22 +20,23 @@ def getText(cur):
 
 def tokenize(texts, parser=English()):
     for doc in parser.pipe(texts, n_threads=16):
-        yield [token.text for token in doc]
+        yield [[token.text for token in sent] for sent in doc.sents]
 
 
 def writeText(cur):
     texts, ids = izip(*getText(cur))
     for text, ids in izip(tokenize(texts), ids):
-        # print(text, ids) # - Uncomment for debug info.
+        # print(text, ids)  # - Uncomment for debug info.
         # parser.docs.update_one({'_id': doc['_id']},
         #                       {'$set': {'tokenedText': parsedList}})
         # DELETE THIS BRACE
         # '$unset':{'text':''}}) UNCOMMENTING WILL DELETE THE TEXT FIELD
+        pass
 
 
 if __name__ == '__main__':
     data = parser.docs
     cur = data.find({'text': {'$exists': 'true'}}, {'text': 1})
     start = time()
-    writeText(cur[:10000])
+    writeText(cur)
     print(time()-start)
