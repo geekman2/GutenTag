@@ -1,11 +1,20 @@
 from gensim.models import Doc2Vec
+from pprint import pprint
+import os
 
+ids = ['57ac0428058acb4a68a52a47',
+       '57ac042a058acb4a68a52a4d',
+       '57ac042b058acb4a68a52a4e',
+       '57ac042d058acb4a68a52a55',
+       '57ac042e058acb4a68a52a59',
+       '57ac042f058acb4a68a52a5b',
+       '57ac042f058acb4a68a52a5c',
+       '57ac042f058acb4a68a52a5e',
+       '57ac0430058acb4a68a52a5f']
 
-ids = ['57abc460058acb2a38e18c5c', '57abd8cd058acb4a68a49705',
-       '57abd147058acb4a68a47b5c', '57abd504058acb4a68a48809',
-       '57abd419058acb4a68a484d4', '57abd558058acb4a68a4893b']
+modelPath = "{}/var/".format(os.getcwd())
+modelFile = modelPath + "trial.model"
+model = Doc2Vec.load(modelFile)
 
-model = Doc2Vec.load('/home/dante/Documents/GutenTag/var/trial.model')
-
-print model.docvecs.most_similar('57abd8cd058acb4a68a49705')
-print model.most_similar('good')
+pprint(model.docvecs.most_similar('57ac042f058acb4a68a52a5b'))
+pprint(model.most_similar('good'))

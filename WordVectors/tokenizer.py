@@ -2,15 +2,17 @@
 # ------------------------------------------------------------------------------
 # Name:         tokenizer.py
 # Purpose:      Parse and tokenize english text using spaCy
-# Author:       Bharat Ramanathan
+# Author:       Bharat Ramanathan, Devon Muraoka
 # Created:      08/14/2016
-# Copyright:    (c) Bharat Ramanathan
+# Copyright:    (c) Bharat Ramanathan, Devon Muraoka
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-import parser
+import WordVectors.parser
 from spacy.en import English
 from time import time
 from itertools import izip
+import cProfile
+import pstats
 
 
 def getText(cur):
@@ -23,20 +25,32 @@ def tokenize(texts, parser=English()):
         yield [[token.text for token in sent] for sent in doc.sents]
 
 
-def writeText(cur):
+def writeText(cur,start):
+    count = 0
     texts, ids = izip(*getText(cur))
-    for text, ids in izip(tokenize(texts), ids):
-        # print(text, ids)  # - Uncomment for debug info.
-        # parser.docs.update_one({'_id': doc['_id']},
-        #                       {'$set': {'tokenedText': parsedList}})
+    print('Cursor Loaded:{} seconds'.format(time()-start))
+    for text, id in izip(tokenize(texts), ids):
+        # print(text, id)  # - Uncomment for debug info.
+        WordVectors.parser.docs.update_one({'_id': id},
+                                           {'$set': {'tokenedText': text}})
         # DELETE THIS BRACE
         # '$unset':{'text':''}}) UNCOMMENTING WILL DELETE THE TEXT FIELD
-        pass
+        count += 1
+        print(count)
+
+
+def main():
+    start = time()
+    data = WordVectors.parser.docs
+    cur = data.find({'text': {'$exists': 'true'}, 'tokenedText': {'$exists': 'false'}}, {'text': 1})
+    writeText(cur[:50000],start)
+    print('Total Execution Time:{} minutes'.format((time() - start)/60))
 
 
 if __name__ == '__main__':
-    data = parser.docs
-    cur = data.find({'text': {'$exists': 'true'}}, {'text': 1})
-    start = time()
-    writeText(cur)
-    print(time()-start)
+    #   uncomment for profiling information
+    #    cProfile.run('main()','profile.stats')
+    #    stats = pstats.Stats('profile.stats')
+    #    stats.sort_stats('tottime')
+    #    stats.print_stats(100)
+    main()

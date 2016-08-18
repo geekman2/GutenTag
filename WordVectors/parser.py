@@ -8,12 +8,12 @@
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
 import pymongo
-import lnFilter
+import WordVectors.lnFilter
 import multiprocessing
 # import time #UNCOMMENT FOR DEBUGGING
 
 # Necessary connection variables.
-db_ip = '159.203.187.28'
+db_ip = 'localhost'
 db_port = '27017'
 db = pymongo.MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
 docs = db.data.fiction
