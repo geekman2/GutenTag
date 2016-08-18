@@ -1,8 +1,9 @@
 # coding: utf8
 from __future__ import print_function, absolute_import
-from var.mongoSim import simMongoDb
-# from pprint import pprint
+# from var.mongoSim import simMongoDb
 import os
+from time import time
+import WordVectors.parserfrom pprint import pprint
 from gensim.models.doc2vec import LabeledSentence
 from gensim.models import Doc2Vec
 
@@ -19,9 +20,10 @@ class LabeledLineSentence(object):
 def prepData(data):
     for item in data:
         doc = item['tokenedText']
-        flatdoc = [word for sent in doc for word in sent]
+        # pprint(item['_id'])
+        flatdoc = [word for sentence in doc for word in sentence]
         cleandoc = [word.lower() for word in flatdoc if word.isalpha()]
-        yield {'words': flatdoc, 'tags': [item['_id']]}
+        yield {'words': cleandoc, 'tags': [str(item['_id'])]}
 
 
 def TrainModel(sents):
@@ -35,10 +37,15 @@ def TrainModel(sents):
 
 
 if __name__ == '__main__':
-    cur = simMongoDb(1)
+    cur = WordVectors.parser.docs.find({'tokenedText': {'$exists': 'true'}},
+                                       {'tokenedText': 1})
     data = prepData(cur)
     sents = LabeledLineSentence(data)
+    # for sent in sents:
+    #      pprint(sent)
+    start = time()
     model = TrainModel(sents)
+    print("Trained Model in {} minutes".format((time()-start)/60))
     modelPath = "{}/var/".format(os.getcwd())
     modelFile = modelPath+"trial.model"
     if os.path.exists(modelPath):
@@ -46,3 +53,4 @@ if __name__ == '__main__':
     else:
         os.mkdir(modelPath)
         model.save(modelFile)
+    print("Finished in {} minutes".format((time()-start)/60))
