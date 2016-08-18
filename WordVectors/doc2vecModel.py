@@ -2,6 +2,7 @@
 from __future__ import print_function, absolute_import
 from var.mongoSim import simMongoDb
 # from pprint import pprint
+import os
 from gensim.models.doc2vec import LabeledSentence
 from gensim.models import Doc2Vec
 
@@ -24,7 +25,7 @@ def prepData(data):
 
 
 def TrainModel(sents):
-    model = Doc2Vec(size=300, window=10, min_count=5, workers=16, sample=1e5,
+    model = Doc2Vec(size=10000, window=10, min_count=5, workers=16, sample=1e5,
                     alpha=0.025, min_alpha=0.0001, negative=10)
     model.build_vocab(sents)
     for epoch in range(10):
@@ -34,8 +35,14 @@ def TrainModel(sents):
 
 
 if __name__ == '__main__':
-    cur = simMongoDb(10000)
+    cur = simMongoDb(1)
     data = prepData(cur)
     sents = LabeledLineSentence(data)
     model = TrainModel(sents)
-    model.save("/home/dante/Documents/GutenTag/var/trial.model")
+    modelPath = "{}/var/".format(os.getcwd())
+    modelFile = modelPath+"trial.model"
+    if os.path.exists(modelPath):
+        model.save(modelFile)
+    else:
+        os.mkdir(modelPath)
+        model.save(modelFile)
