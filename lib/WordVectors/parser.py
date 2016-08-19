@@ -13,6 +13,10 @@ import multiprocessing
 # import time #UNCOMMENT FOR DEBUGGING
 
 # Necessary connection variables.
+<<<<<<< HEAD:lib/WordVectors/parser.py
+# db_ip = '159.203.187.28'
+=======
+>>>>>>> master:WordVectors/parser.py
 db_ip = 'localhost'
 db_port = '27017'
 db = pymongo.MongoClient('mongodb://{}:{}'.format(db_ip, db_port))

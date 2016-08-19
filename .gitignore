@@ -1,0 +1,4 @@
+tmp/*
+*.npy
+*.npz
+*.pyc
