@@ -3,14 +3,16 @@ from var.mongoSim import simMongoDb
 import numpy as np
 import itertools
 import os
-from gensim.corpora.dictionary import Dictionary
+from gensim.corpora import dictionary, corpora
 from gensim.models.tfidfmodel import TfidfModel
 
 
 class CorpusModel(object):
 
-    def __init__(self, cur, dictFile=None):
+    def __init__(self, cur, dictFile=None, corpusLoc=None):
         self.cur = cur
+        self.corpus = self.loadCorpus()
+        self.corpusLoc = corpusLoc
         if not dictFile:
             self.dictFile = "{}/tmp/corpusdict".format(os.getcwd())
             self.dictionary = self.buildDict()
@@ -32,7 +34,7 @@ class CorpusModel(object):
 
     def buildDict(self):
         self.docs, self.ids = itertools.izip(*self.getText())
-        return Dictionary(self.docs)
+        return dictionary.Dictionary(self.docs)
 
     def buildDoc2Bow(self):
         for text, id in itertools.izip(self.docs, self.ids):
@@ -48,10 +50,39 @@ class CorpusModel(object):
         return Dictionary.load(self.dictFile)
 
     def MakeTfidfModel(self):
-        tfidf = TfidfModel(dictionary=self.dictionary)
+        tfidf = TfidfModel()
         for doc in self.buildDoc2Bow():
             for docid, bow in doc.iteritems():
-                print(tfidf[bow])
+                yield tfidf[bow]
+
+    def writeCorpus(self):
+        tmpLoc = "{}/tmp/.format(os.getcwd()"
+        error = "No {} folder/permission to write corpus.mm".format(tmpLoc)
+        try:
+            self.corpusLoc = '{}/tmp/corpus.mm'.format(os.getcwd())
+        except:
+
+            raise EnvironmentError(error)
+        self.corpus = self.buildDoc2Bow()
+        try:
+            corpora.MmCorpus.serialize(self.corpusLoc, self.corpus)
+        except:
+            raise EnvironmentError(error)
+
+    def loadCorpus(self):
+        if self.corpusLoc:
+            try:
+                self.corpus = corpora.MmCorpus(self.corpusLoc)
+            except:
+                try:
+                    self.writeCorpus()
+                except:
+                    pass
+        else:
+            try:
+                self.writeCorpus()
+            except:
+                pass
 
 if __name__ == '__main__':
     dataFile = "{}/tmp/bowdata.json".format(os.getcwd())
