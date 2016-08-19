@@ -5,6 +5,7 @@ from glob import glob
 # from WordVectors.tokenizer import tokenize, getText
 import json
 import codecs
+
 from itertools import islice  # , izip
 
 """
@@ -59,7 +60,7 @@ def simMongoDb(n=10, array=True, dataLoc=None, jsonLoc=None):
 
 def readJson(fileLoc):
     if fileLoc is None:
-        fileLoc='/home/dante/Documents/GutenTag/var/data.json'
+        fileLoc = '/home/dante/Documents/GutenTag/tmp/bowdata.json'
     with open(fileLoc, 'r') as f:
         for line in f:
             yield json.loads(line)
