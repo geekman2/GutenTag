@@ -52,9 +52,10 @@ def getModelInfo(model, features):
 
 
 if __name__ == '__main__':
-    dataFile = "{}/var/bowdata.json".format(getcwd())
-    cur = simMongoDb(n=10000, array=True, jsonLoc=dataFile)
+    dataFile = "{}/tmp/bowdata.json".format(getcwd())
+    cur = simMongoDb(n=10, array=True, jsonLoc=dataFile)
     text, ids = izip(*getText(cur))
-    model, features = makeModel(text, tfidf=True)
+    model, features = makeSmallModel(text, tfidf=True)
+    print(features)
     cdists = getModelInfo(model, features)
     # print(cdists)

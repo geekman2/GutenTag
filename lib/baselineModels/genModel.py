@@ -4,6 +4,7 @@ import numpy as np
 import itertools
 import os
 from gensim.corpora.dictionary import Dictionary
+from gensim.models.tfidfmodel import TfidfModel
 
 
 class CorpusModel(object):
@@ -30,28 +31,32 @@ class CorpusModel(object):
             yield (key, value)
 
     def buildDict(self):
-        docs, _ = itertools.izip(*self.getText())
-        return Dictionary(docs)
+        self.docs, self.ids = itertools.izip(*self.getText())
+        return Dictionary(self.docs)
 
     def buildDoc2Bow(self):
-        docs, ids = itertools.izip(*self.getText())
-        for text, id in itertools.izip(docs, ids):
+        for text, id in itertools.izip(self.docs, self.ids):
             yield {id: self.dictionary.doc2bow(text)}
 
     def getTokenFreq(self):
         return self.dictionary.token2id
 
     def saveDict(self):
-        self.dictionary.save(self.dictfile)
+        self.dictionary.save(self.dictFile)
 
     def loadDict(self):
         return Dictionary.load(self.dictFile)
 
+    def MakeTfidfModel(self):
+        tfidf = TfidfModel(dictionary=self.dictionary)
+        for doc in self.buildDoc2Bow():
+            for docid, bow in doc.iteritems():
+                print(tfidf[bow])
 
 if __name__ == '__main__':
     dataFile = "{}/tmp/bowdata.json".format(os.getcwd())
     dictFile = "{}/tmp/corpusdict".format(os.getcwd())
     cur = simMongoDb(n=10, array=True, jsonLoc=dataFile)
     model = CorpusModel(cur, dictFile=None)
-    for item in model:
-        print(item)
+    model.saveDict()
+    model.MakeTfidfModel()
