@@ -1,0 +1,2 @@
+#Start Crawl with resume option
+scrapy crawl fanfiction_spider -s JOBDIR=resumes/fanfiction_spider1

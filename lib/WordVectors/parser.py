@@ -8,15 +8,13 @@
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
 import pymongo
-import WordVectors.lnFilter
+import lib.WordVectors.lnFilter
 import multiprocessing
 # import time #UNCOMMENT FOR DEBUGGING
 
 # Necessary connection variables.
-<<<<<<< HEAD:lib/WordVectors/parser.py
+
 # db_ip = '159.203.187.28'
-=======
->>>>>>> master:WordVectors/parser.py
 db_ip = 'localhost'
 db_port = '27017'
 db = pymongo.MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
@@ -26,7 +24,7 @@ docs = db.data.fiction
 def notEnglish(doc):
     # Ids the documents that are non-English
     text = doc['text']
-    if not WordVectors.lnFilter.isEnglishNltk(text):
+    if not lib.WordVectors.lnFilter.isEnglishNltk(text):
         return doc['_id']
 
 
