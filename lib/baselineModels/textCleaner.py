@@ -44,6 +44,7 @@ def writeCleanText(cur, outFile):
             json.dump(item, f)
             f.write('\n')
 
+
 if __name__ == '__main__':
     cur = simMongoDb(n=10000, array=False, )
     dataPath = "{}/var/".format(getcwd())

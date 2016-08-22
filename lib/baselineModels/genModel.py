@@ -1,93 +1,92 @@
 from __future__ import print_function, absolute_import
 from var.mongoSim import simMongoDb
-import numpy as np
+# import numpy as np
 import itertools
 import os
-from gensim.corpora import dictionary, corpora
-from gensim.models.tfidfmodel import TfidfModel
+from gensim import corpora, utils
+from gensim.corpora import dictionary
+from gensim.models import tfidfmodel, ldamulticore
+from time import time
 
 
-class CorpusModel(object):
-
-    def __init__(self, cur, dictFile=None, corpusLoc=None):
+class textModel(object):
+    def __init__(self, cur):
         self.cur = cur
-        self.corpus = self.loadCorpus()
-        self.corpusLoc = corpusLoc
-        if not dictFile:
-            self.dictFile = "{}/tmp/corpusdict".format(os.getcwd())
-            self.dictionary = self.buildDict()
-            self.dictionary.filter_extremes(no_below=2, no_above=0.5,
-                                            keep_n=100000)
-            self.dictionary.compactify()
-
-        else:
-            self.dictFile = dictFile
-            self.dictionary = self.loadDict()
+        self.docs, self.ids = itertools.izip(*self.getText())
+        self._generateConf()
 
     def getText(self):
         for item in self.cur:
             yield item['text'].split(), item['_id']
 
+    def _generateConf(self):
+        cwd = os.getcwd()
+        self.dictFile = "{}/tmp/corpus.dict".format(cwd)
+        self.corpusFile = "{}/tmp/corpora.mm".format(cwd)
+        self.tfidfFile = "{}/tmp/tfidfCorpora.mm".format(cwd)
+
+
+class corpusModel(textModel):
+    def __init__(self, cur):
+        textModel.__init__(self, cur)
+        self.loadDict()
+        self.dictionary.filter_extremes(no_below=2, no_above=0.5,
+                                        keep_n=100000)
+        self.dictionary.compactify()
+        self.corpus = self.loadCorpus()
+        self.tfidfCorpus = self.loadTfidfCorpus()
+
+    """
     def __iter__(self):
         for key, value in self.dictionary.iteritems():
             yield (key, value)
-
-    def buildDict(self):
-        self.docs, self.ids = itertools.izip(*self.getText())
-        return dictionary.Dictionary(self.docs)
+    """
 
     def buildDoc2Bow(self):
-        for text, id in itertools.izip(self.docs, self.ids):
-            yield {id: self.dictionary.doc2bow(text)}
-
-    def getTokenFreq(self):
-        return self.dictionary.token2id
-
-    def saveDict(self):
-        self.dictionary.save(self.dictFile)
+        for doc in self.docs:
+            yield self.dictionary.doc2bow(doc)
 
     def loadDict(self):
-        return Dictionary.load(self.dictFile)
-
-    def MakeTfidfModel(self):
-        tfidf = TfidfModel()
-        for doc in self.buildDoc2Bow():
-            for docid, bow in doc.iteritems():
-                yield tfidf[bow]
-
-    def writeCorpus(self):
-        tmpLoc = "{}/tmp/.format(os.getcwd()"
-        error = "No {} folder/permission to write corpus.mm".format(tmpLoc)
         try:
-            self.corpusLoc = '{}/tmp/corpus.mm'.format(os.getcwd())
-        except:
-
-            raise EnvironmentError(error)
-        self.corpus = self.buildDoc2Bow()
-        try:
-            corpora.MmCorpus.serialize(self.corpusLoc, self.corpus)
-        except:
-            raise EnvironmentError(error)
+            self.dictionary = dictionary.Dictionary.load(self.dictFile)
+        except IOError:
+            self.dictionary = dictionary.Dictionary(self.docs)
+            self.dictionary.save(self.dictFile)
 
     def loadCorpus(self):
-        if self.corpusLoc:
-            try:
-                self.corpus = corpora.MmCorpus(self.corpusLoc)
-            except:
-                try:
-                    self.writeCorpus()
-                except:
-                    pass
-        else:
-            try:
-                self.writeCorpus()
-            except:
-                pass
+        try:
+            return corpora.mmcorpus.MmCorpus(self.corpusFile)
+        except IOError:
+            corpus = self.buildDoc2Bow()
+            corpora.mmcorpus.MmCorpus.serialize(self.corpusFile, corpus)
+            return corpus
+
+    def loadTfidfCorpus(self):
+        try:
+            tfidf = tfidfmodel.TfidfModel.load(self.tfidfFile)
+            tfidfCorpus = tfidf[self.corpus]
+            return tfidfCorpus
+        except IOError:
+            tfidf = tfidfmodel.TfidfModel(self.corpus,
+                                          id2word=self.dictionary)
+            tfidfCorpus = tfidf[self.corpus]
+            tfidf.save(self.tfidfFile)
+            return tfidfCorpus
+
+    def loadLDAModel(self):
+        lda = ldamulticore.LdaMulticore(corpus=self.tfidfCorpus,
+                                        id2word=self.dictionary, workers=16)
+        print(lda.print_topics(10))
+
+
+def mapper(dictModel):
+    print(utils.revdict(dictModel.getToken())[1273])
 
 if __name__ == '__main__':
     dataFile = "{}/tmp/bowdata.json".format(os.getcwd())
-    dictFile = "{}/tmp/corpusdict".format(os.getcwd())
-    cur = simMongoDb(n=10, array=True, jsonLoc=dataFile)
-    model = CorpusModel(cur, dictFile=None)
-    model.saveDict()
-    model.MakeTfidfModel()
+    cur = simMongoDb(n=10000, array=True, jsonLoc=dataFile)
+    start = time()
+    theModel = corpusModel(cur)
+    # print(theModel.tfidfCorpus)
+    theModel.loadLDAModel()
+    # print(time() - start)
