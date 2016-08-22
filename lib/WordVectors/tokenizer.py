@@ -7,7 +7,7 @@
 # Copyright:    (c) Bharat Ramanathan, Devon Muraoka
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-import WordVectors.parser
+import lib.WordVectors.parser
 from spacy.en import English
 from time import time
 from itertools import izip
@@ -31,7 +31,7 @@ def writeText(cur, start):
     print('Cursor Loaded:{} seconds'.format(time()-start))
     for text, id in izip(tokenize(texts), ids):
         # print(text, id)  # - Uncomment for debug info.
-        WordVectors.parser.docs.update_one({'_id': id},
+        lib.WordVectors.parser.docs.update_one({'_id': id},
                                            {'$set': {'tokenedText': text}})
         # DELETE THIS BRACE
         # '$unset':{'text':''}}) UNCOMMENTING WILL DELETE THE TEXT FIELD
@@ -41,10 +41,9 @@ def writeText(cur, start):
 
 def main():
     start = time()
-    data = WordVectors.parser.docs
-    cur = data.find({'text': {'$exists': 'true'},
-                    'tokenedText': {'$exists': 'false'}}, {'text': 1})
-    writeText(cur[:50000], start)
+    data = lib.WordVectors.parser.docs
+    cur = data.aggregate([{'$match':{'tokenedText':{'$exists':False}}}],allowDiskUse=True)
+    writeText(cur, start)
     print('Total Execution Time:{} minutes'.format((time() - start)/60))
 
 if __name__ == '__main__':
