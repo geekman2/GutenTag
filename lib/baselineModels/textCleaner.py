@@ -6,6 +6,7 @@ from var.mongoSim import simMongoDb
 from spacy.en import English
 from os import getcwd
 import json
+from bson import ObjectId
 
 
 class cleanText(object):
@@ -34,8 +35,9 @@ class cleanText(object):
 
     def __iter__(self):
         self.texts, self.ids = izip(*self.getText())
-        for item, id in izip(self.tokenize(), self.ids):
-            yield {'text': re.sub(' +', ' ', u' '.join(item)), '_id': id}
+        for item, idx in izip(self.tokenize(), self.ids):
+            yield {'text': re.sub(' +', ' ', u' '.join(item)),
+                   '_id': ObjectId(idx)}
 
 
 def writeCleanText(cur, outFile):
@@ -44,8 +46,9 @@ def writeCleanText(cur, outFile):
             json.dump(item, f)
             f.write('\n')
 
+
 if __name__ == '__main__':
     cur = simMongoDb(n=10000, array=False, )
     dataPath = "{}/var/".format(getcwd())
-    dataFile = dataPath+"bowdata.json"
+    dataFile = dataPath+"genData.json"
     writeCleanText(cur, dataFile)

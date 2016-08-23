@@ -1,93 +1,140 @@
 from __future__ import print_function, absolute_import
-from var.mongoSim import simMongoDb
-import numpy as np
+# from var.mongoSim import simMongoDb
 import itertools
 import os
-from gensim.corpora import dictionary, corpora
-from gensim.models.tfidfmodel import TfidfModel
+import gensim
+import time
+import lib.baselineModels.textCleaner as cleaner
+import lib.WordVectors.parser as mongoClient
 
 
-class CorpusModel(object):
-
-    def __init__(self, cur, dictFile=None, corpusLoc=None):
+class textModel(object):
+    def __init__(self, cur):
         self.cur = cur
-        self.corpus = self.loadCorpus()
-        self.corpusLoc = corpusLoc
-        if not dictFile:
-            self.dictFile = "{}/tmp/corpusdict".format(os.getcwd())
-            self.dictionary = self.buildDict()
-            self.dictionary.filter_extremes(no_below=2, no_above=0.5,
-                                            keep_n=100000)
-            self.dictionary.compactify()
-
-        else:
-            self.dictFile = dictFile
-            self.dictionary = self.loadDict()
+        self.docs, self.ids = itertools.izip(*self.getText())
+        self._generateConf()
 
     def getText(self):
         for item in self.cur:
             yield item['text'].split(), item['_id']
 
-    def __iter__(self):
-        for key, value in self.dictionary.iteritems():
-            yield (key, value)
+    def _generateConf(self):
+        cwd = os.getcwd()
+        self.dictFile = "{}/tmp/corpus.dict".format(cwd)
+        self.corpusFile = "{}/tmp/corpora.mm".format(cwd)
+        self.tfidfFile = "{}/tmp/tfidfCorpora.mm".format(cwd)
+        self.tfidfSimIndexFile = "{}/tmp/tfidf.index".format(cwd)
+        self.ldaFile = "{}/tmp/ldaModel.mm".format(cwd)
+        self.ldaSimIndexFile = "{}/tmp/lda.index".format(cwd)
 
-    def buildDict(self):
-        self.docs, self.ids = itertools.izip(*self.getText())
-        return dictionary.Dictionary(self.docs)
+
+class corpusModel(textModel):
+    def __init__(self, cur):
+        super(self.__class__, self).__init__(cur)
+        self.loadDict()
+        self.corpus = self.loadCorpus()
+        self.tfidfCorpus = self.loadTfidfCorpus()
+        self.ldaCorpus = self.loadLDAModel()
 
     def buildDoc2Bow(self):
-        for text, id in itertools.izip(self.docs, self.ids):
-            yield {id: self.dictionary.doc2bow(text)}
-
-    def getTokenFreq(self):
-        return self.dictionary.token2id
-
-    def saveDict(self):
-        self.dictionary.save(self.dictFile)
+        for doc in self.docs:
+            yield self.dictionary.doc2bow(doc)
 
     def loadDict(self):
-        return Dictionary.load(self.dictFile)
-
-    def MakeTfidfModel(self):
-        tfidf = TfidfModel()
-        for doc in self.buildDoc2Bow():
-            for docid, bow in doc.iteritems():
-                yield tfidf[bow]
-
-    def writeCorpus(self):
-        tmpLoc = "{}/tmp/.format(os.getcwd()"
-        error = "No {} folder/permission to write corpus.mm".format(tmpLoc)
         try:
-            self.corpusLoc = '{}/tmp/corpus.mm'.format(os.getcwd())
-        except:
+            self.dictionary =\
+                gensim.corpora.dictionary.Dictionary.load(self.dictFile)
+        except IOError:
+            self.dictionary = gensim.corpora.dictionary.Dictionary(self.docs)
+            self.dictionary.filter_extremes(no_below=5, no_above=0.5,
+                                            keep_n=100000)
+            self.dictionary.compactify()
 
-            raise EnvironmentError(error)
-        self.corpus = self.buildDoc2Bow()
-        try:
-            corpora.MmCorpus.serialize(self.corpusLoc, self.corpus)
-        except:
-            raise EnvironmentError(error)
+            self.dictionary.save(self.dictFile)
 
     def loadCorpus(self):
-        if self.corpusLoc:
+        try:
+            return gensim.corpora.mmcorpus.MmCorpus(self.corpusFile)
+        except IOError:
+            corpus = self.buildDoc2Bow()
+            gensim.corpora.mmcorpus.MmCorpus.serialize(self.corpusFile, corpus)
+            return corpus
+
+    def loadTfidfCorpus(self):
+        try:
+            self.tfidfModel =\
+                gensim.models.tfidfmodel.TfidfModel.load(self.tfidfFile)
+            tfidfCorpus = self.tfidfModel[self.corpus]
+            return tfidfCorpus
+        except IOError:
+            params = dict(corpus=self.corpus,
+                          id2word=self.dictionary
+                          )
+            self.tfidfModel = gensim.models.tfidfmodel.TfidfModel(**params)
+            tfidfCorpus = self.tfidfModel[self.corpus]
+            self.tfidfModel.save(self.tfidfFile)
+            return tfidfCorpus
+
+    def loadLDAModel(self, tfidf=True):
+        try:
+            self.ldaModel =\
+                gensim.models.ldamulticore.LdaMulticore.load(self.ldaFile)
+            if tfidf:
+                corpus = self.tfidfCorpus
+            else:
+                corpus = self.corpus
+        except IOError:
+            if tfidf:
+                params = dict(corpus=self.tfidfCorpus,
+                              id2word=self.dictionary,
+                              workers=16)
+            else:
+                params = dict(corpus=self.corpus,
+                              id2word=self.dictionary,
+                              workers=16)
+            self.ldaModel = gensim.models.ldamulticore.LdaMulticore(**params)
+            self.ldaModel.save(self.ldaFile)
+        return self.ldaModel[corpus]
+
+
+class SimilarityModel(corpusModel):
+    def __init__(self, cur):
+        super(self.__class__, self).__init__(self, cur)
+
+    def loadSimIndex(self, type='lda', n=10):
+        if type == 'lda':
+            params = dict(fname=self.ldaSimIndexFile,
+                          corpus=self.ldaCorpus,
+                          num_best=n)
             try:
-                self.corpus = corpora.MmCorpus(self.corpusLoc)
-            except:
-                try:
-                    self.writeCorpus()
-                except:
-                    pass
-        else:
-            try:
-                self.writeCorpus()
-            except:
-                pass
+                self.similar_index =\
+                    gensim.similarities.Similarity.load(self.ldaSimIndexFile)
+            except IOError:
+                self.similar_index =\
+                    gensim.similarities.Similarity(**params)
+
+    def getDocVec(self, doc, type='tfidf'):
+        bow = self.dictionary.doc2bow(doc)
+        if type == 'tfidf':
+            return self.ldaModel[self.tfidfModel[bow]]
+        elif type == 'lda':
+            return self.ldaModel[bow]
+
+    def find_similar(self, doc, n=10):
+        vec = self.dictionary.doc2vec(doc)
+        sims = self.similar_index[vec]
+        sims = sorted(enumerate(sims), key=lambda item: -item[1])
+        for elem in sims[:n]:
+            idx, value = elem
+            print(' '.join(self.docs[idx]), value)
+
 
 if __name__ == '__main__':
-    dataFile = "{}/tmp/bowdata.json".format(os.getcwd())
-    dictFile = "{}/tmp/corpusdict".format(os.getcwd())
-    cur = simMongoDb(n=10, array=True, jsonLoc=dataFile)
-    model = CorpusModel(cur, dictFile=None)
-    model.saveDict()
-    model.MakeTfidfModel()
+    # dataFile = "{}/tmp/genData.json".format(os.getcwd())
+    # cur = simMongoDb(n=10000, array=True, jsonLoc=dataFile)
+    start = time.time()
+    docs = mongoClient.docs
+    cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    cursy = itertools.islice(cleaner.cleanText(cur[:5]), 5)
+    theModel = corpusModel(cursy)
+    print(time.time() - start)
