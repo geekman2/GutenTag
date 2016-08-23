@@ -1,12 +1,12 @@
 from __future__ import print_function, absolute_import
-import re
-from itertools import izip
-from nltk.corpus import stopwords
-from var.mongoSim import simMongoDb
-from spacy.en import English
-from os import getcwd
+import itertools
+import nltk
+# from var.mongoSim import simMongoDb
+import lib.WordVectors.parser as mongoClient
+import os
 import json
-from bson import ObjectId
+import time
+import gensim
 
 
 class cleanText(object):
@@ -15,29 +15,29 @@ class cleanText(object):
         self.cur = cur
         self.texts = None
         self.id = None
+        self.stemmer = gensim.parsing.PorterStemmer()
 
-    def removePunct(self):
-        for text in self.texts:
-            onlyText = re.sub("[^a-zA-Z]",  # The pattern to search for
-                              " ",  # The pattern to replace it with
-                              text)  # The text to search
-            yield onlyText
+    def tokenize(self):
+        stops = set(nltk.corpus.stopwords.words("english"))
+        for doc in self.texts:
+            yield [token for token in
+                   gensim.utils.tokenize(doc, lowercase=True,
+                                         deacc=True, errors="ignore")
+                   if token not in stops]
 
-    def tokenize(self, parser=English()):
-        stops = set(stopwords.words("english"))
-        for doc in parser.pipe(self.removePunct(), n_threads=16):
-                yield [token.text.lower() for token in doc
-                       if token.text.lower() not in stops]
+    def stem(self):
+        for doc in self.tokenize():
+            yield [self.stemmer.stem(token) for token in doc]
 
     def getText(self):
         for item in self.cur:
             yield item['text'], item['_id']
 
     def __iter__(self):
-        self.texts, self.ids = izip(*self.getText())
-        for item, idx in izip(self.tokenize(), self.ids):
-            yield {'text': re.sub(' +', ' ', u' '.join(item)),
-                   '_id': ObjectId(idx)}
+        self.texts, self.ids = itertools.izip(*self.getText())
+        for item, idx in itertools.izip(self.stem(), self.ids):
+            yield {'text': u' '.join(item),
+                   '_id': str(idx)}
 
 
 def writeCleanText(cur, outFile):
@@ -48,7 +48,14 @@ def writeCleanText(cur, outFile):
 
 
 if __name__ == '__main__':
-    cur = simMongoDb(n=10000, array=False, )
-    dataPath = "{}/var/".format(getcwd())
-    dataFile = dataPath+"genData.json"
-    writeCleanText(cur, dataFile)
+    start = time.time()
+    dataPath = "{}/tmp/testFiles".format(os.getcwd())
+    docs = mongoClient.docs
+    cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    # cur = simMongoDb(n=10000, array=True, dataLoc=dataPath)
+    jsonPath = "{}/tmp/".format(os.getcwd())
+    jsonFile = jsonPath+"genDataBig.json"
+    # writeCleanText(cur[:500000], jsonFile)
+    for item in cleanText(cur[:10]):
+        print("i")
+    print(time.time() - start)

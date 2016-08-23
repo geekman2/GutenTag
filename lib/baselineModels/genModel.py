@@ -1,18 +1,22 @@
 from __future__ import print_function, absolute_import
-from var.mongoSim import simMongoDb
+# from var.mongoSim import simMongoDb
 import itertools
+# import numpy as np
 import os
 import gensim
 import time
 import lib.baselineModels.textCleaner as cleaner
 import lib.WordVectors.parser as mongoClient
+import logging
+
+logger = logging.getLogger('text_similar')
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                    level=logging.INFO)
 
 
-class textModel(object):
+class corpusModel(object):
     def __init__(self, cur):
         self.cur = cur
-        self.docs, self.ids = itertools.izip(*self.getText())
-        self._generateConf()
 
     def getText(self):
         for item in self.cur:
@@ -20,25 +24,27 @@ class textModel(object):
 
     def _generateConf(self):
         cwd = os.getcwd()
-        self.dictFile = "{}/tmp/corpus.dict".format(cwd)
-        self.corpusFile = "{}/tmp/corpora.mm".format(cwd)
-        self.tfidfFile = "{}/tmp/tfidfCorpora.mm".format(cwd)
-        self.tfidfSimIndexFile = "{}/tmp/tfidf.index".format(cwd)
-        self.ldaFile = "{}/tmp/ldaModel.mm".format(cwd)
-        self.ldaSimIndexFile = "{}/tmp/lda.index".format(cwd)
+        workingdir = "{}/tmp/modeldir/".format(cwd)
+        if not os.path.exists(workingdir):
+            os.makedirs(workingdir)
+        self.dictFile = "{}corpus.dict".format(workingdir)
+        self.corpusFile = "{}corpora.mm".format(workingdir)
+        self.tfidfFile = "{}tfidfCorpora.mm".format(workingdir)
+        self.tfidfSimIndexFile = "{}tfidf.index".format(workingdir)
+        self.ldaFile = "{}ldaModel.mm".format(workingdir)
+        self.simIndexFile = "{}simFile.idx".format(workingdir)
+        self.simIndexPrefix = "{}simidx".format(workingdir)
 
-
-class corpusModel(textModel):
-    def __init__(self, cur):
-        super(self.__class__, self).__init__(cur)
-        self.loadDict()
+    def trainModel(self, lda_topics=14):
+        self.docs, self.idx = itertools.izip(*self.getText())
+        self._generateConf()
+        self.dictionary = self.loadDict()
         self.corpus = self.loadCorpus()
         self.tfidfCorpus = self.loadTfidfCorpus()
-        self.ldaCorpus = self.loadLDAModel()
+        self.ldaCorpus = self.loadLDAModel(n_topics=lda_topics)
 
     def buildDoc2Bow(self):
-        for doc in self.docs:
-            yield self.dictionary.doc2bow(doc)
+        return [self.dictionary.doc2bow(doc) for doc in self.docs]
 
     def loadDict(self):
         try:
@@ -51,91 +57,93 @@ class corpusModel(textModel):
             self.dictionary.compactify()
 
             self.dictionary.save(self.dictFile)
+        return self.dictionary
 
     def loadCorpus(self):
         try:
-            return gensim.corpora.mmcorpus.MmCorpus(self.corpusFile)
+            logger.info("trying to load corpus from disk")
+            corpus = gensim.corpora.mmcorpus.MmCorpus(self.corpusFile)
+            logger.info("loaded corpus from disk")
         except IOError:
-            corpus = self.buildDoc2Bow()
-            gensim.corpora.mmcorpus.MmCorpus.serialize(self.corpusFile, corpus)
-            return corpus
+            logger.info("Building a corpus")
+
+            logger.info("Saving corpus to disk")
+            gensim.corpora.mmcorpus.MmCorpus.serialize(self.corpusFile,
+                                                       self.buildDoc2Bow())
+            logger.info("Saved corpus to disk")
+            corpus = gensim.corpora.mmcorpus.MmCorpus(self.corpusFile)
+        return corpus
 
     def loadTfidfCorpus(self):
         try:
+            logger.info("trying to load tfidf model from disk")
             self.tfidfModel =\
                 gensim.models.tfidfmodel.TfidfModel.load(self.tfidfFile)
-            tfidfCorpus = self.tfidfModel[self.corpus]
-            return tfidfCorpus
+            logger.info("loaded tfidf model from disk")
         except IOError:
-            params = dict(corpus=self.corpus,
-                          id2word=self.dictionary
-                          )
+            logger.info("training tfidf model")
+            params = {"corpus": self.corpus,
+                      "id2word": self.dictionary
+                      }
             self.tfidfModel = gensim.models.tfidfmodel.TfidfModel(**params)
-            tfidfCorpus = self.tfidfModel[self.corpus]
+            logger.info("Saving tfidf model to disk")
             self.tfidfModel.save(self.tfidfFile)
-            return tfidfCorpus
+            logger.info("Saved tfidf model to disk")
+        self.tfidfCorpus = self.tfidfModel[self.corpus]
+        return self.tfidfCorpus
 
-    def loadLDAModel(self, tfidf=True):
+    def loadLDAModel(self, n_topics=14):
         try:
+            logger.info("trying to load LDA model from disk")
             self.ldaModel =\
                 gensim.models.ldamulticore.LdaMulticore.load(self.ldaFile)
-            if tfidf:
-                corpus = self.tfidfCorpus
-            else:
-                corpus = self.corpus
+            logger.info("loaded LDA model from disk")
         except IOError:
-            if tfidf:
-                print(self.tfidfCorpus)
-                params = dict(corpus=self.tfidfCorpus,
-                              id2word=self.dictionary,
-                              workers=16)
-            else:
-                params = dict(corpus=self.corpus,
-                              id2word=self.dictionary,
-                              workers=16)
+            logger.info("training LDA model")
+            params = {"corpus": self.tfidfCorpus,
+                      "id2word": self.dictionary,
+                      "num_topics": n_topics,
+                      "workers": 16
+                      }
             self.ldaModel = gensim.models.ldamulticore.LdaMulticore(**params)
+            logger.info("Saving LDA model to disk")
             self.ldaModel.save(self.ldaFile)
-        return self.ldaModel[corpus]
+            logger.info("Saved LDA model to disk")
+        self.ldaCorpus = self.ldaModel[self.tfidfCorpus]
+        return self.ldaCorpus
 
-
-class SimilarityModel(corpusModel):
-    def __init__(self, cur):
-        super(self.__class__, self).__init__(self, cur)
-
-    def loadSimIndex(self, type='lda', n=10):
-        if type == 'lda':
-            params = dict(fname=self.ldaSimIndexFile,
-                          corpus=self.ldaCorpus,
-                          num_best=n)
-            try:
-                self.similar_index =\
-                    gensim.similarities.Similarity.load(self.ldaSimIndexFile)
-            except IOError:
-                self.similar_index =\
-                    gensim.similarities.Similarity(**params)
-
-    def getDocVec(self, doc, type='tfidf'):
-        bow = self.dictionary.doc2bow(doc)
-        if type == 'tfidf':
-            return self.ldaModel[self.tfidfModel[bow]]
-        elif type == 'lda':
-            return self.ldaModel[bow]
-
-    def find_similar(self, doc, n=10):
-        vec = self.dictionary.doc2vec(doc)
-        sims = self.similar_index[vec]
-        sims = sorted(enumerate(sims), key=lambda item: -item[1])
-        for elem in sims[:n]:
-            idx, value = elem
-            print(' '.join(self.docs[idx]), value)
+    def loadSimIndex(self, n_features=14, n_best=10):
+        params = {"output_prefix": self.simIndexPrefix,
+                  "corpus": self.ldaCorpus,
+                  "num_features": n_features,
+                  "num_best": 10
+                  }
+        try:
+            logger.info("Loading Sim Index from disk")
+            self.similar_index =\
+                gensim.similarities.docsim.Similarity.load(self.simIndexFile)
+            logger.info("Loaded Sim Index from disk")
+        except IOError:
+            logger.info("Creating Sim Index")
+            self.similar_index =\
+                gensim.similarities.docsim.Similarity(**params)
+            logger.info("Saving Sim Index to disk")
+            self.similar_index.save(self.simIndexFile)
+            logger.info("Saved Sim Index to disk")
+        return self.similar_index
 
 
 if __name__ == '__main__':
-    dataFile = "{}/tmp/genData.json".format(os.getcwd())
-    cur = simMongoDb(n=10, array=True, jsonLoc=dataFile)
+    # dataFile = "{}/tmp/genData.json".format(os.getcwd())
+    # cursy = simMongoDb(n=10, array=True, jsonLoc=dataFile)
     start = time.time()
     docs = mongoClient.docs
-    # cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
-    # cursy = itertools.islice(cleaner.cleanText(cur[:5]), 5)
-    theModel = corpusModel(cur)
+    cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    cursy = cleaner.cleanText(cur[:100])
+    theModel = corpusModel(cursy)
+    theModel.trainModel()
+    theModel.loadSimIndex()
+    for sims in theModel.similar_index:
+        print("sims = {}".format(sims))
+    # print(theModel.ldaModel.print_topics())
     print(time.time() - start)
