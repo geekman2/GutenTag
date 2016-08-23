@@ -1,5 +1,5 @@
 from __future__ import print_function, absolute_import
-# from var.mongoSim import simMongoDb
+from var.mongoSim import simMongoDb
 import itertools
 import os
 import gensim
@@ -85,6 +85,7 @@ class corpusModel(textModel):
                 corpus = self.corpus
         except IOError:
             if tfidf:
+                print(self.tfidfCorpus)
                 params = dict(corpus=self.tfidfCorpus,
                               id2word=self.dictionary,
                               workers=16)
@@ -130,11 +131,11 @@ class SimilarityModel(corpusModel):
 
 
 if __name__ == '__main__':
-    # dataFile = "{}/tmp/genData.json".format(os.getcwd())
-    # cur = simMongoDb(n=10000, array=True, jsonLoc=dataFile)
+    dataFile = "{}/tmp/genData.json".format(os.getcwd())
+    cur = simMongoDb(n=10, array=True, jsonLoc=dataFile)
     start = time.time()
     docs = mongoClient.docs
-    cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
-    cursy = itertools.islice(cleaner.cleanText(cur[:5]), 5)
-    theModel = corpusModel(cursy)
+    # cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    # cursy = itertools.islice(cleaner.cleanText(cur[:5]), 5)
+    theModel = corpusModel(cur)
     print(time.time() - start)
