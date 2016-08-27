@@ -17,8 +17,8 @@ NEWSPIDER_MODULE = 'Monk.spiders'
 DOWNLOAD_HANDLERS = {'s3': None,}
 
 LOG_LEVEL = 'INFO'
-LOG_FILE = 'ficton_crawl.log'
-LOG_STDOUT = True
+#  LOG_FILE = 'ficton_crawl.log'
+#  LOG_STDOUT = True
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'Monk (+http://www.fanaticsdomain.com)'
@@ -68,7 +68,7 @@ CONCURRENT_REQUESTS_PER_DOMAIN=16
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = ['Monk.pipelines.MonkPipeline', ]
 
-MONGODB_SERVER = "159.203.187.28"
+MONGODB_SERVER = "localhost"
 MONGODB_PORT = 27017
 MONGODB_DB = "data"
 MONGODB_COLLECTION = "fiction"
