@@ -1,13 +1,18 @@
 from __future__ import print_function, absolute_import
 # from var.mongoSim import simMongoDb
 import itertools
-# import numpy as np
+import numpy as np
 import os
 import gensim
 import time
 import lib.baselineModels.textCleaner as cleaner
 import lib.WordVectors.parser as mongoClient
 import logging
+import sklearn.cluster as cluster
+import sklearn.manifold as manifold
+import pandas as pd
+from matplotlib import pylab as plt
+import seaborn as sns
 
 logger = logging.getLogger('text_similar')
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -15,7 +20,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 
 
 class CorpusModel(object):
-    def __init__(self, cursor, lda_topics=14):
+    def __init__(self, cursor, lda_topics=21):
         self.cur = cursor
         # Configure Files
         cwd = os.getcwd()
@@ -30,11 +35,11 @@ class CorpusModel(object):
         self.sim_index_file = '{}simFile.idx'.format(working_directory)
         self.simIndexPrefix = '{}simidx'.format(working_directory)
         # Train Model
-        self.docs, self.idx = itertools.izip(*self.get_text())
-        self.dictionary = self.load_dict()
-        self.corpus = self.load_corpus()
-        self.tfidf_corpus = self.load_tfidf_corpus()
-        self.lda_corpus = self.load_lda_model(n_topics=lda_topics)
+        # self.docs, self.idx = itertools.izip(*self.get_text())
+        # self.dictionary = self.load_dict()
+        # self.corpus = self.load_corpus()
+        # self.tfidf_corpus = self.load_tfidf_corpus()
+        # self.lda_corpus = self.load_lda_model(n_topics=lda_topics)
 
     def get_text(self):
         """
@@ -60,6 +65,7 @@ class CorpusModel(object):
             self.dictionary = gensim.corpora.dictionary.Dictionary.load(self.dict_file)
             logger.info('Corpus loaded from file')
         else:
+            self.docs, self.idx = itertools.izip(*self.get_text())
             self.dictionary = gensim.corpora.dictionary.Dictionary(self.docs)
             self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=100000)
             self.dictionary.compactify()
@@ -76,9 +82,10 @@ class CorpusModel(object):
         """
         if os.path.isfile(self.corpus_file):
             logger.info('Trying to load corpus from disk')
-            corpus = gensim.corpora.mmcorpus.MmCorpus(self.corpus_file)
+            self.corpus = gensim.corpora.mmcorpus.MmCorpus(self.corpus_file)
             logger.info('loaded corpus from disk')
         else:
+            self.dictionary = self.load_dict()
             logger.info('Corpus not found on disk. Building corpus and serializing to disk')
             gensim.corpora.mmcorpus.MmCorpus.serialize(self.corpus_file, self.build_doc_2_bow())
             logger.info('Successfully built corpus and saved corpus to disk')
@@ -95,6 +102,7 @@ class CorpusModel(object):
             self.tfidf_model = gensim.models.tfidfmodel.TfidfModel.load(self.tfidf_file)
             logger.info('loaded tfidf model from disk')
         else:
+            self.load_corpus()
             logger.info('training tfidf model')
             params = {'corpus': self.corpus,
                       'id2word': self.dictionary
@@ -106,11 +114,11 @@ class CorpusModel(object):
         self.tfidf_corpus = self.tfidf_model[self.corpus]
         return self.tfidf_corpus
 
-    def load_lda_model(self, n_topics=14):
+    def load_lda_model(self, n_topics=21):
         """
         Load Latent Dirichlet Allocation Model into memory, if none exists, create it
         :param n_topics: The number of topics the LDA algorithm will pick out
-        :return: 
+        :return:
         """
         if os.path.isfile(self.lda_file):
             logger.info('trying to load LDA model from disk')
@@ -118,6 +126,7 @@ class CorpusModel(object):
                 gensim.models.ldamulticore.LdaMulticore.load(self.lda_file)
             logger.info('loaded LDA model from disk')
         else:
+            self.tfidf_corpus = self.load_tfidf_corpus()
             logger.info('training LDA model')
             params = {'corpus': self.tfidf_corpus,
                       'id2word': self.dictionary,
@@ -131,23 +140,26 @@ class CorpusModel(object):
         self.lda_corpus = self.lda_model[self.tfidf_corpus]
         return self.lda_corpus
 
-    def load_sim_index(self, n_features=14, n_best=10):
+    def load_sim_index(self, n_features=None, n_best=None):
         """
         Return index of similarity
         :param n_features:
         :param n_best: Number of documents to return, sorted by most similar
         :return:Similar Object:
         """
-        params = {'output_prefix': self.simIndexPrefix,
-                  'corpus': self.lda_corpus,
-                  'num_features': n_features,
-                  'num_best': 10
-                  }
+        if not n_features:
+            n_features = len(self.dictionary)
         if os.path.isfile(self.sim_index_file):
             logger.info('Loading Sim Index from disk')
             self.similar_index = gensim.similarities.docsim.Similarity.load(self.sim_index_file)
             logger.info('Loaded Sim Index from disk')
         else:
+            self.lda_corpus = self.load_lda_model
+            params = {'output_prefix': self.simIndexPrefix,
+                      'corpus': self.lda_corpus,
+                      'num_features': n_features,
+                      'num_best': n_best
+                      }
             logger.info('Creating Sim Index')
             self.similar_index = gensim.similarities.docsim.Similarity(**params)
             logger.info('Saving Sim Index to disk')
@@ -156,16 +168,81 @@ class CorpusModel(object):
         return self.similar_index
 
 
+def clusterer(doc_vecs, num_k=21):
+    logger.info('Clustering')
+    cwd = os.getcwd()
+    working_directory = '{}/tmp/modeldir/'.format(cwd)
+    if not os.path.exists(working_directory):
+        os.makedirs(working_directory)
+    cluster_file = '{}cluster.npy'.format(working_directory)
+    
+    if os.path.isfile(cluster_file):
+	logger.info('checking if {} exists'.format(cluster_file))
+	c_centers = np.load(cluster_file)
+	logger.info('Loaded {} from {} successfully'.format("c_centers", cluster_file))
+    else:
+	logger.info('Performing clustering')
+    	lda_vecs = np.array(doc_vecs)
+    	params = {'n_clusters': num_k,
+                  'batch_size': 300,
+                  'init': 'k-means++',
+                  # 'n_jobs': -1,
+                  'random_state': 21
+                  }
+        k_means = cluster.MiniBatchKMeans(**params)
+        k_means.fit(lda_vecs.astype(np.float))
+    	# cls.transform(lda_vecs.astype(np.float))
+        c_centers = np.array(k_means.labels_.tolist())
+        logger.info('Saving the c_centers data to disk')
+	np.save(file=cluster_file, arr=c_centers)
+    return c_centers
+
+
+def reduce_dimension(data):
+    logger.info('Dimensionality Reduction')
+    cwd = os.getcwd()
+    working_directory = '{}/tmp/modeldir/'.format(cwd)
+    if not os.path.exists(working_directory):
+        os.makedirs(working_directory)
+    t_sne_file = '{}t_sne.npy'.format(working_directory)
+    if os.path.isfile(t_sne_file):
+	logger.info('Checking if {} exists'.format(t_sne_file))
+	t_sne_data = np.load(t_sne_file)
+    else:
+        logger.info('Reducing Dimensionality')
+        t_sne = manifold.TSNE()
+        t_sne_data = t_sne.fit_transform(data)
+	logger.info('Saving the t_sne_data to disk')
+        np.save(file=t_sne_file,arr=t_sne_data)
+    return t_sne_data
+
+
+def plot_clusters(similarities):
+    pos = reduce_dimension(similarities)
+    xs, ys = pos[:, 0], pos[:, 1]
+    clusters = clusterer(similarities)
+    df = pd.DataFrame({"clusters": clusters, "Xs": xs, "ys": ys})
+    docgroups = df.groupby("clusters")
+    logger.info('Plotting the Clusters')
+    plt.figure(figsize=(20, 10))
+    sns.pointplot(x=Xs,y=ys,hue=clusters,data=df,join=False,markers='o',
+		  linestyles='')
+    # for name, group in docgroups:
+    #    plt.plot(x=group.Xs, y=group.ys, hue=name, join=False, markers='o',
+    #                 linestyles='')
+    plt.show()
+
 if __name__ == '__main__':
     # dataFile = '{}/tmp/genData.json'.format(os.getcwd())
     # cursy = simMongoDb(n=10, array=True, jsonLoc=dataFile)
     start = time.time()
     docs = mongoClient.docs
     cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
-    cursy = cleaner.cleanText(cur[:100])
+    cursy = cleaner.cleanText(cur[:10000])
     the_model = CorpusModel(cursy)
-    the_model.load_sim_index()
-    for sims in the_model.similar_index:
-        print('sims = {}'.format(sims))
-    # print(theModel.ldaModel.print_topics())
+    similarities = the_model.load_sim_index(n_features=21)
+    # for sims in similarities:
+    #    print('sims = {}'.format(sims))
+    # print(clusterer(similarities))
+    plot_clusters(similarities)
     print(time.time() - start)
