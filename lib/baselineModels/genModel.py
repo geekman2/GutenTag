@@ -175,26 +175,24 @@ def clusterer(doc_vecs, num_k=21):
     if not os.path.exists(working_directory):
         os.makedirs(working_directory)
     cluster_file = '{}cluster.npy'.format(working_directory)
-    
+
     if os.path.isfile(cluster_file):
-	logger.info('checking if {} exists'.format(cluster_file))
-	c_centers = np.load(cluster_file)
-	logger.info('Loaded {} from {} successfully'.format("c_centers", cluster_file))
+        logger.info('checking if {} exists'.format(cluster_file))
+        c_centers = np.load(cluster_file)
+        logger.info('Loaded {} from {} successfully'.format("c_centers", cluster_file))
     else:
-	logger.info('Performing clustering')
-    	lda_vecs = np.array(doc_vecs)
-    	params = {'n_clusters': num_k,
+        logger.info('Performing clustering')
+        params = {'n_clusters': num_k,
                   'batch_size': 300,
                   'init': 'k-means++',
-                  # 'n_jobs': -1,
                   'random_state': 21
                   }
         k_means = cluster.MiniBatchKMeans(**params)
-        k_means.fit(lda_vecs.astype(np.float))
-    	# cls.transform(lda_vecs.astype(np.float))
+        k_means.fit(doc_vecs)
+        # cls.transform(lda_vecs.astype(np.float))
         c_centers = np.array(k_means.labels_.tolist())
         logger.info('Saving the c_centers data to disk')
-	np.save(file=cluster_file, arr=c_centers)
+        np.save(file=cluster_file, arr=c_centers)
     return c_centers
 
 
@@ -206,13 +204,13 @@ def reduce_dimension(data):
         os.makedirs(working_directory)
     t_sne_file = '{}t_sne.npy'.format(working_directory)
     if os.path.isfile(t_sne_file):
-	logger.info('Checking if {} exists'.format(t_sne_file))
-	t_sne_data = np.load(t_sne_file)
+        logger.info('Checking if {} exists'.format(t_sne_file))
+        t_sne_data = np.load(t_sne_file)
     else:
         logger.info('Reducing Dimensionality')
         t_sne = manifold.TSNE()
         t_sne_data = t_sne.fit_transform(data)
-	logger.info('Saving the t_sne_data to disk')
+        logger.info('Saving the t_sne_data to disk')
         np.save(file=t_sne_file,arr=t_sne_data)
     return t_sne_data
 
@@ -225,11 +223,8 @@ def plot_clusters(similarities):
     docgroups = df.groupby("clusters")
     logger.info('Plotting the Clusters')
     plt.figure(figsize=(20, 10))
-    sns.pointplot(x=Xs,y=ys,hue=clusters,data=df,join=False,markers='o',
-		  linestyles='')
-    # for name, group in docgroups:
-    #    plt.plot(x=group.Xs, y=group.ys, hue=name, join=False, markers='o',
-    #                 linestyles='')
+    for name, group in docgroups:
+        plt.plot(group.Xs, group.ys, marker='o', ms=10, linestyle='',label=name)
     plt.show()
 
 if __name__ == '__main__':
@@ -241,8 +236,5 @@ if __name__ == '__main__':
     cursy = cleaner.cleanText(cur[:10000])
     the_model = CorpusModel(cursy)
     similarities = the_model.load_sim_index(n_features=21)
-    # for sims in similarities:
-    #    print('sims = {}'.format(sims))
-    # print(clusterer(similarities))
     plot_clusters(similarities)
     print(time.time() - start)
