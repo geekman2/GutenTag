@@ -1,61 +1,80 @@
 from __future__ import print_function, absolute_import
 import itertools
 import nltk
-# from var.mongoSim import simMongoDb
+import spacy
 import lib.WordVectors.parser as mongoClient
-import os
-import json
 import time
 import gensim
 
 
 class cleanText(object):
 
-    def __init__(self, cur):
-        self.cur = cur
-        self.texts = None
-        self.id = None
+    def __init__(self, docs, n_docs=None, lemmatize_it=True, stem_it=True, normalize_it=True):
+        self.docs = docs
+        self.n_docs = n_docs
+        self.lemmatize_it = lemmatize_it
+        self.stem_it = stem_it
+        self.normalize_it = normalize_it
+        self.parser = spacy.load('en')
         self.stemmer = gensim.parsing.PorterStemmer()
+        self.stops = set(nltk.corpus.stopwords.words('english'))
 
-    def tokenize(self):
-        stops = set(nltk.corpus.stopwords.words("english"))
-        for doc in self.texts:
-            yield [token for token in
-                   gensim.utils.tokenize(doc, lowercase=True,
-                                         deacc=True, errors="ignore")
-                   if token not in stops]
+    def stem(self, token):
+        if self.stem_it:
+            return self.stemmer.stem(token)
+        else:
+            return token
 
-    def stem(self):
-        for doc in self.tokenize():
-            yield [self.stemmer.stem(token) for token in doc]
+    def lemmatizer(self, token):
+        if self.lemmatize_it:
+            if token.pos_ != 'PROPN' and token.ent_type_ not in ['PERSON', 'ORG']:
+                return token.orth_
+            else:
+                return 'ENTITY'
+        else:
+            return token.orth_
 
-    def getText(self):
-        for item in self.cur:
-            yield item['text'], item['_id']
+    def normalize(self,token):
+        if self.normalize_it:
+            if token.lower() not in self.stops:
+                return token
+        else:
+            return token
+
+    def pre_process(self, texts):
+        for doc in self.parser.pipe(texts, n_threads=4):
+            processed = []
+            for sent in doc.sents:
+                for token in sent:
+                    lemmatized = self.lemmatizer(token)
+                    normalized = self.normalize(lemmatized)
+                    if normalized:
+                        stemmed = self.stem(normalized)
+                        processed.append(stemmed)
+                    else:
+                        continue
+            yield processed
+
+    def get_texts(self):
+        cur = self.docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+        for item in cur[:self.n_docs]:
+            yield item['text']
+        if not self.n_docs:
+            for item in cur:
+                yield item
 
     def __iter__(self):
-        self.texts, self.ids = itertools.izip(*self.getText())
-        for item, idx in itertools.izip(self.stem(), self.ids):
-            yield {'text': u' '.join(item),
-                   '_id': str(idx)}
-
-
-def writeCleanText(cur, outFile):
-    with open(outFile, 'a') as f:
-        for item in cleanText(cur):
-            json.dump(item, f)
-            f.write('\n')
-
+        texts = self.get_texts()
+        for item in self.pre_process(texts):
+            yield item
 
 if __name__ == '__main__':
     start = time.time()
-    dataPath = "{}/tmp/testFiles".format(os.getcwd())
     docs = mongoClient.docs
-    cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
-    # cur = simMongoDb(n=10000, array=True, dataLoc=dataPath)
-    jsonPath = "{}/tmp/".format(os.getcwd())
-    jsonFile = jsonPath+"genDataBig.json"
-    # writeCleanText(cur[:500000], jsonFile)
-    for item in cleanText(cur[:10]):
-        print("i")
+    cleaned = cleanText(docs=docs, n_docs=10)
+    for item in cleaned:
+        print(item)
+    for item in cleaned:
+        print(item)
+
     print(time.time() - start)

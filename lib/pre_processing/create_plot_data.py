@@ -43,8 +43,8 @@ class ReduceDimension():
 if __name__ == '__main__':
     from lib.pre_processing import CorpusModel, SemanticModels, SimilarityModel
     corpus_model = CorpusModel()
-    corpus = corpus_model.load_corpus()
     dictionary = corpus_model.load_dict()
+    corpus = corpus_model.load_corpus()
     tfidf_corpus = corpus_model.load_tfidf_corpus()
     semantic_model = SemanticModels(corpus=tfidf_corpus, dictionary=dictionary, tfidf=True)
     tfidf_lda = semantic_model.load_lda_model()

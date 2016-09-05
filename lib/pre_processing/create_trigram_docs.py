@@ -1,32 +1,10 @@
-import lib.WordVectors.parser as mongoClient
-from collections import defaultdict
-import time
-import os
+from itertools import izip
+import spacy
+from lib.WordVectors.parser import docs
 
-cwd = os.getcwd()
-path = os.path.join(cwd,'tmp','modeldir')
-print path
+parser = spacy.load('en')
 
+doc = docs.find_one({'text':{'$exists':1}},{'text':1, '_id':0})
+parsed = parser(doc['text'])
 
-
-
-"""
-start = time.time()
-df = defaultdict(int)
-docs = mongoClient.docs
-cur = docs.find({'trigram_frequency': {'$exists': 1}}, {'trigram_frequency':1, '_id':0})
-for doc in cur[:10]:
-    for term in doc['trigram_frequency'].keys():
-        df[term] += 1
-
-print(time.time()-start)
-
-
-
-
-tf = cur['trigram_frequency']
-total_keys = len(tf.keys())
-factor = total_keys/sum(tf.values())
-freqs = np.array(tf.values())
-print(factor*freqs)
-"""
+def pre_process(texts,stops=True,lemmatize=True,stemm=True)

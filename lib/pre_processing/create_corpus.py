@@ -17,43 +17,30 @@ working_directory = os.path.join(cwd,'tmp','modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)
 docs = mongoClient.docs
-cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
-cursor = cleaner.cleanText(cur[:10000])
+processed_docs = cleaner.cleanText(docs=docs)
 
+class MyCorpus(gensim.corpora.TextCorpus):
 
-class CorpusModel(object):
-    def __init__(self):
-        self.cur = cursor
-        self.dict_file = os.path.join(working_directory,'corpus.dict')
-        self.corpus_file = os.path.join(working_directory,'corpora.mm')
-        self.tfidf_file = os.path.join(working_directory, 'tfidfCorpora.mm')
+    def get_texts(self):
+        for doc in self.input:
+            yield doc
 
-    def get_text(self):
-        """
-        Generate doc/id pairs from self.cur
-        """
-        for item in self.cur:
-            yield item['text'].split(), item['_id']
-
-    def build_doc_2_bow(self):
-        """
-
-        :return:
-        """
-        return [self.dictionary.doc2bow(doc) for doc in self.docs]
+    def get_docs(self):
+        for item in self.get_texts():
+            yield self.dictionary.doc2bow(item, allow_update=False)
 
     def load_dict(self):
         """
 
         :return:
         """
+        self.dict_file = os.path.join(working_directory, 'corpus.dict')
         if os.path.isfile(self.dict_file):
-            logger.info('Loading corpus from file')
+            logger.info('Loading corpus dictionary from file')
             self.dictionary = gensim.corpora.dictionary.Dictionary.load(self.dict_file)
-            logger.info('Corpus loaded from file')
+            logger.info('Corpus dictionary loaded from file')
         else:
-            self.docs, self.idx = itertools.izip(*self.get_text())
-            self.dictionary = gensim.corpora.dictionary.Dictionary(self.docs)
+            # self.docs, self.idx = itertools.izip(*self.get_text())
             self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=100000)
             self.dictionary.compactify()
             self.dictionary.save(self.dict_file)
@@ -66,14 +53,14 @@ class CorpusModel(object):
         :rtype: object
         :return: Corpus
         """
+        self.corpus_file = os.path.join(working_directory, 'corpora.mm')
         if os.path.isfile(self.corpus_file):
             logger.info('Trying to load corpus from disk')
             self.corpus = gensim.corpora.mmcorpus.MmCorpus(self.corpus_file)
             logger.info('loaded corpus from disk')
         else:
-            self.dictionary = self.load_dict()
             logger.info('Corpus not found on disk. Building corpus and serializing to disk')
-            gensim.corpora.mmcorpus.MmCorpus.serialize(self.corpus_file, self.build_doc_2_bow())
+            gensim.corpora.mmcorpus.MmCorpus.serialize(self.corpus_file, self.get_docs())
             logger.info('Successfully built corpus and saved corpus to disk')
             self.corpus = gensim.corpora.mmcorpus.MmCorpus(self.corpus_file)
         return self.corpus
@@ -83,6 +70,7 @@ class CorpusModel(object):
         Load TFIDF model from disk, if it does not exist, train and save it to disk
         :return: TFIDF Corpus
         """
+        self.tfidf_file = os.path.join(working_directory, 'tfidfCorpora.mm')
         if os.path.isfile(self.tfidf_file):
             logger.info('trying to load tfidf model from disk')
             self.tfidf_model = gensim.models.tfidfmodel.TfidfModel.load(self.tfidf_file)
@@ -103,7 +91,8 @@ if __name__ == '__main__':
     # dataFile = '{}/tmp/genData.json'.format(os.getcwd())
     # cursy = simMongoDb(n=10, array=True, jsonLoc=dataFile)
     start = time.time()
-    the_model = CorpusModel()
+
+    the_model = MyCorpus(processed_docs)
     the_model.load_dict()
     the_model.load_corpus()
     the_model.load_tfidf_corpus()
