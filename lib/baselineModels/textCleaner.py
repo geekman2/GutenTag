@@ -7,11 +7,8 @@ import time
 import gensim
 
 
-class cleanText(object):
-
-    def __init__(self, docs, n_docs=None, lemmatize_it=True, stem_it=True, normalize_it=True):
-        self.docs = docs
-        self.n_docs = n_docs
+class TextProcessor(object):
+    def __init__(self, lemmatize_it=True, stem_it=True, normalize_it=True):
         self.lemmatize_it = lemmatize_it
         self.stem_it = stem_it
         self.normalize_it = normalize_it
@@ -27,8 +24,8 @@ class cleanText(object):
 
     def lemmatizer(self, token):
         if self.lemmatize_it:
-            if token.pos_ != 'PROPN' and token.ent_type_ not in ['PERSON', 'ORG']:
-                return token.orth_
+            if token.pos_ != 'PROPN' and token.ent_type_ not in {'PERSON', 'ORG'}:
+                return token.lemma_
             else:
                 return 'ENTITY'
         else:
@@ -41,8 +38,8 @@ class cleanText(object):
         else:
             return token
 
-    def pre_process(self, texts):
-        for doc in self.parser.pipe(texts, n_threads=4):
+    def pre_processor(self, docs):
+        for doc in self.parser.pipe(docs, n_threads=4):
             processed = []
             for sent in doc.sents:
                 for token in sent:
@@ -55,26 +52,13 @@ class cleanText(object):
                         continue
             yield processed
 
-    def get_texts(self):
-        cur = self.docs.find({'text': {'$exists': 'true'}}, {'text': 1})
-        for item in cur[:self.n_docs]:
-            yield item['text']
-        if not self.n_docs:
-            for item in cur:
-                yield item
-
-    def __iter__(self):
-        texts = self.get_texts()
-        for item in self.pre_process(texts):
-            yield item
-
 if __name__ == '__main__':
     start = time.time()
     docs = mongoClient.docs
-    cleaned = cleanText(docs=docs, n_docs=10)
-    for item in cleaned:
-        print(item)
-    for item in cleaned:
-        print(item)
-
+    cur = mongoClient.docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    cleaned = TextProcessor()
+    def temp(cur):
+        for item in cur[:100]:
+            yield item['text']
+    for item in cleaned.pre_processor(temp(cur)): pass
     print(time.time() - start)
