@@ -11,6 +11,7 @@ import lib.WordVectors.parser
 from spacy.en import English
 from time import time
 from itertools import izip
+import var.settings as settings
 import cProfile
 import pstats
 
@@ -31,8 +32,7 @@ def writeText(cur, start):
     print('Cursor Loaded:{} seconds'.format(time()-start))
     for text, id in izip(tokenize(texts), ids):
         # print(text, id)  # - Uncomment for debug info.
-        lib.WordVectors.parser.docs.update_one({'_id': id},
-                                           {'$set': {'tokenedText': text}})
+        settings.docs.update_one({'_id': id},{'$set': {'tokenedText': text}})
         # DELETE THIS BRACE
         # '$unset':{'text':''}}) UNCOMMENTING WILL DELETE THE TEXT FIELD
         count += 1
