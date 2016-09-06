@@ -1,3 +1,11 @@
+# coding = utf-8
+# ------------------------------------------------------------------------------
+# Name:         Create Plot
+# Purpose:      Create Plots of clusters #TODO improve this description
+# Author:       Bharat Ramanathan, Devon Muraoka
+# Created:      9/6/2016
+# Copyright:    (c) Bharat Ramanathan, Devon Muraoka
+# ------------------------------------------------------------------------------
 import pandas as pd
 import logging
 import os

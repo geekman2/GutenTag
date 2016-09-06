@@ -1,3 +1,11 @@
+# coding = utf-8
+# ------------------------------------------------------------------------------
+# Name:         Create clusters
+# Purpose:      Create clusters#TODO improve this description
+# Author:       Bharat Ramanathan, Devon Muraoka
+# Created:      9/6/2016
+# Copyright:    (c) Bharat Ramanathan, Devon Muraoka
+# ------------------------------------------------------------------------------
 import logging
 import os
 import numpy as np

@@ -10,8 +10,12 @@ import pymongo
 import time
 import bs4
 import requests
+import logging
 import var.settings as settings
 
+logger = logging.getLogger('text_similar')
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                    level=logging.INFO)
 
 class Enhancer(object):
     def __init__(self, db):
@@ -34,7 +38,7 @@ class Enhancer(object):
             text = " ".join([x.text for x in soup.find_all('p')])
             self.db.update_one({'_id': _id}, {'$set': {'text': text}})
             count += 1
-            print count, url
+            logging.info(count, url)
 
 
 if __name__ == "__main__":
