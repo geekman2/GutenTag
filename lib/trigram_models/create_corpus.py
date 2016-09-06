@@ -1,37 +1,35 @@
-import gensim
-import logging
-import os
-import time
-import itertools
-
-import lib.baselineModels.textCleaner as cleaner
+from __future__ import print_function, absolute_import
 import lib.WordVectors.parser as mongoClient
+import os
+
+import logging
+import gensim
 
 logger = logging.getLogger('text_similar')
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
-# Global configurations
 cwd = os.getcwd()
 working_directory = os.path.join(cwd,'tmp','modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)
-docs = mongoClient.docs
-processed_docs = cleaner.cleanText(docs=docs)
 
-class MyCorpus(gensim.corpora.TextCorpus):
 
+class CorpusModel(object):
     def get_texts(self):
-        for doc in self.input:
-            yield doc
+        self.cur = mongoClient.docs.find({'text': {'$exists': 1}}, {'text': 1, '_id': 0}).batch_size(1000)
+        for doc in self.cur:
+            yield doc['text']
 
-    def get_docs(self):
-        for item in self.get_texts():
-            yield self.dictionary.doc2bow(item, allow_update=False)
+    def get_trigrams(self):
+        for text in self.get_texts():
+            tokens = []
+            for i in xrange(len(text) - 3):
+                tokens.append(text[i:i+3])
+            yield tokens
 
     def load_dict(self):
         """
-
         :return:
         """
         self.dict_file = os.path.join(working_directory, 'corpus.dict')
@@ -40,11 +38,15 @@ class MyCorpus(gensim.corpora.TextCorpus):
             self.dictionary = gensim.corpora.dictionary.Dictionary.load(self.dict_file)
             logger.info('Corpus dictionary loaded from file')
         else:
-            # self.docs, self.idx = itertools.izip(*self.get_text())
-            self.dictionary.filter_extremes(no_below=5, no_above=0.5, keep_n=100000)
+            self.dictionary = gensim.corpora.Dictionary(self.get_trigrams())
+            self.dictionary.filter_extremes(no_below=1, no_above=0.99, keep_n=100000)
             self.dictionary.compactify()
             self.dictionary.save(self.dict_file)
         return self.dictionary
+
+    def get_bow(self):
+        for doc in self.get_trigrams():
+            yield self.dictionary.doc2bow(doc)
 
     def load_corpus(self):
         """
@@ -60,7 +62,7 @@ class MyCorpus(gensim.corpora.TextCorpus):
             logger.info('loaded corpus from disk')
         else:
             logger.info('Corpus not found on disk. Building corpus and serializing to disk')
-            gensim.corpora.mmcorpus.MmCorpus.serialize(self.corpus_file, self.get_docs())
+            gensim.corpora.mmcorpus.MmCorpus.serialize(self.corpus_file, self.get_bow(), id2word=self.dictionary)
             logger.info('Successfully built corpus and saved corpus to disk')
             self.corpus = gensim.corpora.mmcorpus.MmCorpus(self.corpus_file)
         return self.corpus
@@ -87,12 +89,9 @@ class MyCorpus(gensim.corpora.TextCorpus):
         self.tfidf_corpus = self.tfidf_model[self.corpus]
         return self.tfidf_corpus
 
-if __name__ == '__main__':
-    # dataFile = '{}/tmp/genData.json'.format(os.getcwd())
-    # cursy = simMongoDb(n=10, array=True, jsonLoc=dataFile)
-    start = time.time()
 
-    the_model = MyCorpus(processed_docs)
-    the_model.load_dict()
-    the_model.load_corpus()
-    the_model.load_tfidf_corpus()
+if __name__ == '__main__':
+    mycorpus = CorpusModel()
+    mycorpus.load_dict()
+    mycorpus.load_corpus()
+    mycorpus.load_tfidf_corpus()

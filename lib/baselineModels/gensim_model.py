@@ -185,6 +185,7 @@ def clusterer(doc_vecs, num_k=21):
         params = {'n_clusters': num_k,
                   'batch_size': 300,
                   'init': 'k-means++',
+                  # 'n_jobs': -1,
                   'random_state': 21
                   }
         k_means = cluster.MiniBatchKMeans(**params)
@@ -223,6 +224,8 @@ def plot_clusters(similarities):
     docgroups = df.groupby("clusters")
     logger.info('Plotting the Clusters')
     plt.figure(figsize=(20, 10))
+    # sns.pointplot(x=df.Xs,y=df.ys,hue=df.clusters,data=df,join=False,markers='o',
+    #		  linestyles='')
     for name, group in docgroups:
         plt.plot(group.Xs, group.ys, marker='o', ms=10, linestyle='',label=name)
     plt.show()
@@ -236,5 +239,8 @@ if __name__ == '__main__':
     cursy = cleaner.cleanText(cur[:10000])
     the_model = CorpusModel(cursy)
     similarities = the_model.load_sim_index(n_features=21)
+    # for sims in similarities:
+    #    print('sims = {}'.format(sims))
+    # print(clusterer(similarities))
     plot_clusters(similarities)
     print(time.time() - start)

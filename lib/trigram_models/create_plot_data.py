@@ -41,7 +41,7 @@ class ReduceDimension():
 
 
 if __name__ == '__main__':
-    from lib.pre_processing import CorpusModel, SemanticModels, SimilarityModel
+    from lib.trigram_models import CorpusModel, SemanticModels, SimilarityModel
     corpus_model = CorpusModel()
     dictionary = corpus_model.load_dict()
     corpus = corpus_model.load_corpus()

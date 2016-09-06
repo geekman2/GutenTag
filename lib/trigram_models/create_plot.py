@@ -27,7 +27,7 @@ def plot_clusters(plot_data, cluster_data):
 
 
 if __name__ == '__main__':
-    from lib.pre_processing import CorpusModel, SemanticModels, SimilarityModel, Clusterer, ReduceDimension
+    from lib.trigram_models import CorpusModel, SemanticModels, SimilarityModel, Clusterer, ReduceDimension
 
     corpus_model = CorpusModel()
     dictionary = corpus_model.load_dict()
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     sims_model = SimilarityModel(corpus=tfidf_corpus, dictionary=dictionary, tfidf=True, model=None)
     sim_index = sims_model.load_sim_index()
     cluster_model = Clusterer(doc_vecs=sim_index, tfidf=True, model=None)
-    cluster_data = cluster_model.k_clusterer()
+    cluster_data = cluster_model.agglo_clusterer()
     reducer = ReduceDimension(data=sim_index, tfidf=True, model=None)
     plot_data = reducer.t_sne_reduce()
     plot_clusters(plot_data, cluster_data)
