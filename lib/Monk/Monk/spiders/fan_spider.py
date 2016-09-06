@@ -25,9 +25,9 @@ class FanfictionSpider(CrawlSpider):
         "https://m.fanfiction.net/anime/Fullmetal-Alchemist/"
     ]
     rules = [
-        Rule(LinkExtractor(allow=[r'https://m.fanfiction.net/s/12011067/1/Hunting-a-Lost-Shadow'],
+        Rule(LinkExtractor(allow=[r'.*'],
                            deny=[r'communities', r'.php', r'/r/', r'/u/', r'/forum/', r'crossover']),
-             callback="parse_page", follow=True),
+             callback='parse_page', follow=True),
     ]
 
     def parse_page(self, response):
