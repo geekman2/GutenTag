@@ -6,6 +6,7 @@
 # Copyright:   (c) Devon Muraoka, Bharat Ramanathan 
 #-------------------------------------------------------------------------------
 import pymongo
+import os
 
 # Necessary connection variables.
 
@@ -14,3 +15,6 @@ db_ip = 'localhost'
 db_port = '27017'
 db = pymongo.MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
 docs = db.data.fiction
+
+# Root Directory
+project_root = os.path.dirname(os.path.realpath(__file__))  # GutenTag Project root
