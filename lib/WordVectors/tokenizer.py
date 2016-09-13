@@ -7,14 +7,11 @@
 # Copyright:    (c) Bharat Ramanathan, Devon Muraoka
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-
-from itertools import izip
-from time import time
-
 from spacy.en import English
-
-import lib.WordVectors.parser
-import settings as settings
+from itertools import izip
+import settings
+import cProfile
+import pstats
 
 
 def getText(cur):
@@ -33,7 +30,7 @@ def writeText(cur, start):
     print('Cursor Loaded:{} seconds'.format(time()-start))
     for text, id in izip(tokenize(texts), ids):
         # print(text, id)  # - Uncomment for debug info.
-        settings.docs.update_one({'_id': id}, {'$set': {'tokenedText': text}})
+        settings.docs.update_one({'_id': id},{'$set': {'tokenedText': text}})
         # DELETE THIS BRACE
         # '$unset':{'text':''}}) UNCOMMENTING WILL DELETE THE TEXT FIELD
         count += 1

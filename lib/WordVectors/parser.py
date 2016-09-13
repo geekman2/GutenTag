@@ -7,7 +7,8 @@
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-
+import pymongo
+import lib.WordVectors.language_filter
 import multiprocessing
 
 import lib.WordVectors.language_filter
