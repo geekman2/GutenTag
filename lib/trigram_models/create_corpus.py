@@ -7,9 +7,8 @@
 # Copyright:    (c) Bharat Ramanathan, Devon Muraoka
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-import var.settings as settings
+import settings
 import os
-
 import logging
 import gensim
 
@@ -18,7 +17,7 @@ logger = logging.getLogger('text_similar')
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
-cwd = os.getcwd()
+cwd = settings.project_root
 working_directory = os.path.join(cwd,'tmp','modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)

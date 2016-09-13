@@ -10,8 +10,9 @@ import logging
 import os
 import numpy as np
 import sklearn.cluster as cluster
+import settings
 
-cwd = os.getcwd()
+cwd = settings.project_root
 working_directory = os.path.join(cwd,'tmp','modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)
@@ -40,8 +41,8 @@ class Clusterer(object):
 
         if os.path.isfile(self.cluster_file):
             logger.info('checking if {} exists'.format(self.cluster_file))
-            c_centers = np.load(self.cluster_file)
-            logger.info('Loaded {} from {} successfully'.format("c_centers", self.cluster_file))
+            cluster_centers = np.load(self.cluster_file)
+            logger.info('Loaded {} from {} successfully'.format("cluster_centers", self.cluster_file))
         else:
             logger.info('Performing clustering')
             params = {'n_clusters': num_k,
@@ -51,10 +52,10 @@ class Clusterer(object):
                       }
             k_means = cluster.MiniBatchKMeans(**params)
             k_means.fit(self.doc_vecs)
-            c_centers = np.array(k_means.labels_.tolist())
-            logger.info('Saving the c_centers data to disk')
-            np.save(file=self.cluster_file, arr=c_centers)
-        return c_centers
+            cluster_centers = np.array(k_means.labels_.tolist())
+            logger.info('Saving the cluster_centers data to disk')
+            np.save(file=self.cluster_file, arr=cluster_centers)
+        return cluster_centers
 
     def agglo_clusterer(self, num_k=21):
         logger.info('Initializing Agglomerative Clustering')
@@ -63,8 +64,17 @@ class Clusterer(object):
                   }
         agglo = cluster.AgglomerativeClustering(**params)
         agglo.fit(self.doc_vecs)
-        c_centers = np.array(agglo.labels_.tolist())
-        return c_centers
+        cluster_centers = np.array(agglo.labels_.tolist())
+        return cluster_centers
+
+    def dbscan_clusterer(self):
+        logger.info('Performing Clustering using DBSCAN')
+        params = {'metric':'precomputed'
+                    }
+        dbscan = cluster.DBSCAN(**params)
+        dbscan.fit(self.doc_vecs)
+        cluster_centers = np.array(dbscan.labels_.tolist())
+        return cluster_centers
 
 if __name__ == '__main__':
     from lib.trigram_models import CorpusModel, SemanticModels, SimilarityModel
@@ -72,9 +82,9 @@ if __name__ == '__main__':
     corpus = corpus_model.load_corpus()
     dictionary = corpus_model.load_dict()
     tfidf_corpus = corpus_model.load_tfidf_corpus()
-    semantic_model = SemanticModels(corpus=corpus, dictionary=dictionary, tfidf=False)
-    bow_lda = semantic_model.load_lda_model()
-    sims_model = SimilarityModel(corpus=bow_lda, dictionary=dictionary, tfidf=False, model='lda')
+    #semantic_model = SemanticModels(corpus=corpus, dictionary=dictionary, tfidf=False)
+    #bow_lda = semantic_model.load_lda_model()
+    sims_model = SimilarityModel(corpus=tfidf_corpus, dictionary=dictionary, tfidf=True, model=None)
     sim_index = sims_model.load_sim_index()
     cluster_model = Clusterer(sim_index, tfidf=False, model='lda')
-    cluster_model.agglo_clusterer()
+    cluster_model.k_clusterer()

@@ -1,6 +1,7 @@
 import os
 import logging
 import gensim
+import settings
 
 
 logger = logging.getLogger('text_similar')
@@ -8,7 +9,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
 # Global configure Files
-cwd = os.getcwd()
+cwd = settings.project_root
 working_directory = os.path.join(cwd,'tmp','modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)
