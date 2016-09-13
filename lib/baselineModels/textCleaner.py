@@ -1,54 +1,64 @@
 from __future__ import print_function, absolute_import
-import re
-from itertools import izip
-from nltk.corpus import stopwords
-from var.mongoSim import simMongoDb
-from spacy.en import English
-from os import getcwd
-import json
-from bson import ObjectId
+import itertools
+import nltk
+import spacy
+import lib.WordVectors.parser as mongoClient
+import time
+import gensim
 
 
-class cleanText(object):
+class TextProcessor(object):
+    def __init__(self, lemmatize_it=True, stem_it=True, normalize_it=True):
+        self.lemmatize_it = lemmatize_it
+        self.stem_it = stem_it
+        self.normalize_it = normalize_it
+        self.parser = spacy.load('en')
+        self.stemmer = gensim.parsing.PorterStemmer()
+        self.stops = set(nltk.corpus.stopwords.words('english'))
 
-    def __init__(self, cur):
-        self.cur = cur
-        self.texts = None
-        self.id = None
+    def stem(self, token):
+        if self.stem_it:
+            return self.stemmer.stem(token)
+        else:
+            return token
 
-    def removePunct(self):
-        for text in self.texts:
-            onlyText = re.sub("[^a-zA-Z]",  # The pattern to search for
-                              " ",  # The pattern to replace it with
-                              text)  # The text to search
-            yield onlyText
+    def lemmatizer(self, token):
+        if self.lemmatize_it:
+            if token.pos_ != 'PROPN' and token.ent_type_ not in {'PERSON', 'ORG'}:
+                return token.lemma_
+            else:
+                return 'ENTITY'
+        else:
+            return token.orth_
 
-    def tokenize(self, parser=English()):
-        stops = set(stopwords.words("english"))
-        for doc in parser.pipe(self.removePunct(), n_threads=16):
-                yield [token.text.lower() for token in doc
-                       if token.text.lower() not in stops]
+    def normalize(self,token):
+        if self.normalize_it:
+            if token.lower() not in self.stops:
+                return token
+        else:
+            return token
 
-    def getText(self):
-        for item in self.cur:
-            yield item['text'], item['_id']
-
-    def __iter__(self):
-        self.texts, self.ids = izip(*self.getText())
-        for item, idx in izip(self.tokenize(), self.ids):
-            yield {'text': re.sub(' +', ' ', u' '.join(item)),
-                   '_id': ObjectId(idx)}
-
-
-def writeCleanText(cur, outFile):
-    with open(outFile, 'a') as f:
-        for item in cleanText(cur):
-            json.dump(item, f)
-            f.write('\n')
-
+    def pre_processor(self, docs):
+        for doc in self.parser.pipe(docs, n_threads=4):
+            processed = []
+            for sent in doc.sents:
+                for token in sent:
+                    lemmatized = self.lemmatizer(token)
+                    normalized = self.normalize(lemmatized)
+                    if normalized:
+                        stemmed = self.stem(normalized)
+                        processed.append(stemmed)
+                    else:
+                        continue
+            yield processed
 
 if __name__ == '__main__':
-    cur = simMongoDb(n=10000, array=False, )
-    dataPath = "{}/var/".format(getcwd())
-    dataFile = dataPath+"genData.json"
-    writeCleanText(cur, dataFile)
+    start = time.time()
+    docs = mongoClient.docs
+    cur = mongoClient.docs.find({'text': {'$exists': 'true'}}, {'text': 1})
+    cleaned = TextProcessor()
+    def temp(cur):
+        for item in cur[:100]:
+            yield item['text']
+    for item in cleaned.pre_processor(temp(cur)): pass
+    print(time.time() - start)

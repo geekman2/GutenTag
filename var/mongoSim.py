@@ -38,7 +38,7 @@ def writeFiles(cur):
 
 def getData(fileLoc):
     if fileLoc is None:
-        fileLoc = '/home/dante/Documents/GutenTag/var/testFiles/'
+        fileLoc = '/home/dante/Documents/GutenTag/tmp/testFiles/'
     for item in glob(fileLoc+'*'):
         f = codecs.open(item, encoding='utf-8', mode='r')
         filedat = u""
@@ -60,7 +60,7 @@ def simMongoDb(n=10, array=True, dataLoc=None, jsonLoc=None):
 
 def readJson(fileLoc):
     if fileLoc is None:
-        fileLoc = '/home/dante/Documents/GutenTag/tmp/bowdata.json'
+        fileLoc = '/home/dante/Documents/GutenTag/tmp/genData.json'
     with open(fileLoc, 'r') as f:
         for line in f:
             yield json.loads(line)

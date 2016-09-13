@@ -7,24 +7,21 @@
 # Copyright:    (c) Bharat Ramanathan
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-import pymongo
-import lib.WordVectors.lnFilter
+
 import multiprocessing
-# import time #UNCOMMENT FOR DEBUGGING
 
-# Necessary connection variables.
+import lib.WordVectors.language_filter
+import settings as settings
 
-# db_ip = '159.203.187.28'
-db_ip = 'localhost'
-db_port = '27017'
-db = pymongo.MongoClient('mongodb://{}:{}'.format(db_ip, db_port))
-docs = db.data.fiction
+if settings.debug == True:
+    import time
 
+docs = settings.docs
 
 def notEnglish(doc):
     # Ids the documents that are non-English
     text = doc['text']
-    if not lib.WordVectors.lnFilter.isEnglishNltk(text):
+    if not lib.WordVectors.language_filter.is_english_nltk(text):
         return doc['_id']
 
 
@@ -38,17 +35,18 @@ def worker(item):
 
 def removeNonEnglish():
     # Multiprocessing-fu with the non-English filter.
-    # start = time.time() (uncomment for debugging-info)
+    if settings.debug == True:
+        start = time.time()
     cur = docs.find({'text': {'$exists': 'true'}}, {'text': 1})
     pool = multiprocessing.Pool(8)
     pool.map_async(worker, cur)
     pool.close()
     pool.join()
-    # uncomment the below lines for debugging info
-    # print(docs.count())
-    # print("TOTAL RUNTIME:{}".format(time.time()-start))
+    if settings.debug == True:
+        print(docs.count())
+        print("TOTAL RUNTIME:{}".format(time.time()-start))
 
 if __name__ == '__main__':
-    # uncomment the below lines for debugging info
-    # print("START COUNT:{}".format(docs.count()))
+    if settings.debug == True:
+        print("START COUNT:{}".format(docs.count()))
     removeNonEnglish()

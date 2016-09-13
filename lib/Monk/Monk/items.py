@@ -11,7 +11,6 @@ import scrapy
 class MonkPageItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
-    title = scrapy.Field()
     url = scrapy.Field()
 
 
@@ -23,3 +22,4 @@ class MonkStoryItem(scrapy.Item):
     trigram_frequency = scrapy.Field()
     fandom = scrapy.Field()
     genres = scrapy.Field()
+
