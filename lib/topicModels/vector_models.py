@@ -1,8 +1,8 @@
-from glob import glob
 import os
-
+from glob import glob
 import gensim
 from nltk.corpus import stopwords
+import numpy as np
 
 from time import time
 import logging
@@ -28,13 +28,23 @@ class MyCorpus(gensim.corpora.TextCorpus):
 
 
 class VectorModels(object):
-    def __init__(self, data_folder, tmp_folder, stopwords=set()):
+    def __init__(self, data_folder, tmp_folder,
+                 stopwords=set(), sample_size=None):
+
         self.data_folder = data_folder
         self.tmp_folder = tmp_folder
         self.stopwords = stopwords
+        self.sample_size = sample_size
+
+    def _get_file_list(self):
+        file_list = glob(self.data_folder)
+        if not self.sample_size:
+            return file_list
+        else:
+            return np.random.choice(file_list, self.sample_size, replace=False)
 
     def build_corpus(self, no_below=5, no_above=0.5):
-        mycorpus = MyCorpus(glob(self.data_folder))
+        mycorpus = MyCorpus(self._get_file_list())
         mycorpus = self.filter_stopwords(mycorpus, self.stopwords)
 
         mycorpus.dictionary.filter_extremes(no_below=no_below,
@@ -97,7 +107,7 @@ if __name__ == '__main__':
     # Build the Corpus
     start_corpus = time()
     cwd = os.getcwd()
-    data_folder = os.path.join(cwd, 'tmp', 'testFiles', '*')
+    data_folder = os.path.join(cwd, 'tmp', 'test_files', '*')
     tmp_folder = os.path.join(cwd, 'tmp', 'modeldir')
 
     vectors = VectorModels(data_folder, tmp_folder)
