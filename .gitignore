@@ -5,3 +5,4 @@ tmp/*
 .idea/*
 .ipynb_checkpoints
 *.bak
+/tmp/
