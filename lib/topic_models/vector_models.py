@@ -18,13 +18,15 @@ class MyCorpus(gensim.corpora.TextCorpus):
             f = open(item, 'r').read()
             yield self.tokenizer(f)
 
-    def tokenizer(self, doc):
-
-        return gensim.utils.tokenize(doc,
-                                     lowercase=True,
-                                     deacc=True,
-                                     errors='strict'
-                                     )
+    def tokenizer(self, doc, stem=True):
+        if not stem:
+            return gensim.utils.tokenize(doc,
+                                         lowercase=True,
+                                         deacc=True,
+                                         errors='strict'
+                                         )
+        else:
+            return gensim.parsing.preprocessing.preprocess_string(doc)
 
 
 class VectorModels(object):
