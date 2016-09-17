@@ -65,8 +65,8 @@ class Clusterer(object):
                 npchunk = gensim.matutils.corpus2dense(corpus=item, num_terms=len(dictionary), num_docs=len(item))
                 if npchunk.shape[1] == c_size:
                     k_means.partial_fit(npchunk.T)
-                    logger.info('Fit batch #{}'.format(i+1))
-            #Parallel(n_jobs=-1)(delayed(worker)(i) for i in chunks)
+                    logger.info('Fit batch #{} of {} {}% complete'.format(i+1, len(corpus)/1000, round(float(i+1)/len(corpus))))
+
         return k_means
 
 
@@ -105,5 +105,5 @@ if __name__ == '__main__':
     # sim_index.output_prefix = working_directory
     # sim_index.check_moved()
     cluster_model = Clusterer(tfidf_corpus, tfidf=True, model=None)
-    fit_model = cluster_model.k_clusterer()[0]
-    cPickle.dump(fit_model, open('KMeans.cluster', 'w'))
+    fit_model = cluster_model.k_clusterer()
+    cPickle.dump(fit_model, open(os.path.join(cwd,'KMeans.cluster'), 'w'))
