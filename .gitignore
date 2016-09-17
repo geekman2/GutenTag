@@ -1,8 +1,7 @@
 *.npy
 *.npz
 *.pyc
-tmp/
+tmp
 .idea
 .ipynb_checkpoints
 *.bak
-/tmp/
