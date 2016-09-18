@@ -13,6 +13,8 @@ import sklearn.cluster as cluster
 import settings
 import cPickle
 import gensim
+import time
+import datetime
 
 
 cwd = settings.project_root
@@ -22,7 +24,7 @@ if not os.path.exists(working_directory):
 
 logger = logging.getLogger('text_similar')
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
-                    level=logging.DEBUG)
+                    level=logging.DEBUG, filename=os.path.join(cwd, 'Clustering.log'))
 
 
 class Clusterer(object):
@@ -43,6 +45,24 @@ class Clusterer(object):
 
     def k_clusterer(self, num_k=21):
 
+        def compute_time(item_time, remaining_items, i):
+            per_item_time = int(5*round(float(item_time)/5))
+            if per_item_time < item_time:
+                per_item_time += 5
+            time_remaining = per_item_time*(remaining_items-i)
+            fancy_time = str(datetime.timedelta(seconds=time_remaining)).split(':')
+            hours = fancy_time[0]
+            minutes = fancy_time[1]
+            seconds = fancy_time[2]
+            if time_remaining > 3600:
+                output = 'Approximately {} hour {} minutes remaining'.format(hours, minutes, seconds)
+            elif time_remaining > 60:
+                output = 'Approximately {} minutes remaining'.format(minutes)
+            else:
+                output = 'Approximately {} seconds remaining'.format(seconds)
+            return output
+
+
         logger.info('Initializing K_Means Clustering')
 
         if os.path.isfile(self.cluster_file):
@@ -51,21 +71,28 @@ class Clusterer(object):
             logger.info('Loaded {} from {} successfully'.format("cluster_centers", self.cluster_file))
         else:
             logger.info('Performing clustering')
-            params = {'n_clusters': 21,
+            params = {'n_clusters': 500,
                       'init': 'k-means++',
                       'random_state': 1791,
-                      'batch_size':1000
+                      'batch_size': 5000
                       }
             # Initialization
             k_means = cluster.MiniBatchKMeans(**params)
-            c_size = 1000
+            c_size = 5000
             chunks = gensim.utils.chunkize(corpus, chunksize=c_size, maxsize=3)
             # Training
-            for i,item in enumerate(chunks):
+            for i, item in enumerate(chunks):
+                start = time.time()
                 npchunk = gensim.matutils.corpus2dense(corpus=item, num_terms=len(dictionary), num_docs=len(item))
                 if npchunk.shape[1] == c_size:
                     k_means.partial_fit(npchunk.T)
-                    logger.info('Fit batch #{} of {} {}% complete'.format(i+1, len(corpus)/1000, round(float(i+1)/len(corpus))))
+                    end = time.time() - start
+                    remaining_batches = len(corpus)/c_size
+                    percentage = round(int(i+1)/float(len(corpus)/c_size))
+                    ETA = compute_time(end, remaining_batches, i)
+                    log_text = 'Fit batch #{} of {} {}% complete {}'.format(i+1, remaining_batches, percentage, ETA)
+                    logger.info(log_text)
+                    print log_text
 
         return k_means
 
@@ -106,4 +133,4 @@ if __name__ == '__main__':
     # sim_index.check_moved()
     cluster_model = Clusterer(tfidf_corpus, tfidf=True, model=None)
     fit_model = cluster_model.k_clusterer()
-    cPickle.dump(fit_model, open(os.path.join(cwd,'KMeans.cluster'), 'w'))
+    cPickle.dump(fit_model, open(os.path.join(cwd, 'KMeans.cluster'), 'w'))
