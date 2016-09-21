@@ -12,6 +12,8 @@ import cPickle
 import settings
 import os
 import operator
+from pprint import pprint
+import numpy as np
 
 cwd = os.path.join(settings.project_root, 'tmp')
 
@@ -22,7 +24,18 @@ def graph_exponential():
     plt.ylabel('Number of Samples Required')
     plt.show()
 
+def plot_data(frequency, label):
+    X = np.arange(len(frequency))
+    plt.bar(X, frequency, align='center', width=0.5)
+    plt.xticks(X, label)
+    locs, labels = plt.xticks()
+    plt.setp(labels, rotation=90)
+    ymax = max(frequency) + 0.001
+    plt.ylim(0, ymax)
+    plt.show()
+
 def get_distribution():
+    fig = plt.figure()
     distribution = {}
     counts = cPickle.load(open(os.path.join(cwd, 'counts.dict')))
     for label in counts:
@@ -30,10 +43,28 @@ def get_distribution():
         trigrams = counts[label]
         total = sum(trigrams.values())
         for gram in trigrams:
-            distribution[label][gram] = counts[label][gram]/float(total)
-        sorted_distribution = sorted(distribution[label].items(), key=operator.itemgetter(0))
+            new_value = counts[label][gram]/float(total)
+            distribution[label][gram] = new_value
+        sorted_distribution = sorted(distribution[label].items(), key=operator.itemgetter(1), reverse=True)
         distribution[label] = sorted_distribution
-    for genre in counts:
-        print(distribution[genre][:5])
+    for i, genre in enumerate(counts):
+        genre_dist = distribution[genre][:10]
+        frequency = [x[1] for x in genre_dist]
+        labels = [y[0] for y in genre_dist]
+        print(genre+':')
+        pprint(genre_dist)
+
+        X = np.arange(len(frequency))
+        plt.bar(X, frequency, align='center', width=0.5)
+        plt.xticks(X, labels)
+        locs, labels = plt.xticks()
+        plt.setp(labels, rotation=90)
+        ymax = max(frequency) + 0.001
+        plt.ylim(0, ymax)
+        plt.title(genre)
+        plt.tight_layout()
+        plt.show()
+
+
 
 get_distribution()

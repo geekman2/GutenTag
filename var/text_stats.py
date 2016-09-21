@@ -39,7 +39,7 @@ def get_texts():
             remove = list(set(text) - legal_characters)
             for letter in remove:
                 text = text.replace(letter, ' ')
-                text = text.replace('  ', ' ')
+                text = ' '.join(text.split())
             logger.debug('Working on text:{}'.format(text))
             yield label, text
 
