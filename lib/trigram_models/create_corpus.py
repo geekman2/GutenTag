@@ -11,6 +11,7 @@ import settings
 import os
 import logging
 import gensim
+import string
 
 
 logger = logging.getLogger('text_similar')
@@ -18,7 +19,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
 cwd = settings.project_root
-working_directory = os.path.join(cwd,'tmp','modeldir')
+working_directory = os.path.join(cwd, 'tmp', 'modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)
 
@@ -26,8 +27,16 @@ if not os.path.exists(working_directory):
 class CorpusModel(object):
     def get_texts(self):
         self.cur = settings.docs.find({'text': {'$exists': 1}}, {'text': 1, '_id': 0}).batch_size(10000)
+        legal_characters = list(string.ascii_lowercase)
+        legal_characters.append(' ')
+        legal_characters = set(legal_characters)
         for doc in self.cur:
-            yield doc['text']
+            text = doc['text'].lower()
+            remove = list(set(text)-legal_characters)
+            for letter in remove:
+                text = text.replace(letter, '')
+            logger.debug('Working on text:{}'.format(text))
+            yield text
 
     def get_trigrams(self):
         for text in self.get_texts():

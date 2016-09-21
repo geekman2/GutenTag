@@ -8,6 +8,7 @@
 import pymongo
 import os
 
+debug = True
 # Necessary connection variables.
 
 # db_ip = '159.203.187.28' remote IP, deprecated
