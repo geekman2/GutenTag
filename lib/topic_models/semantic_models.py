@@ -2,6 +2,7 @@ import os
 import gensim
 from time import time
 import logging
+import settings
 
 logger = logging.getLogger('text_similar')
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -14,8 +15,13 @@ class TopicModels(object):
         self.corpus = corpus
         self.dictionary = dictionary
 
-    def build_lda_model(self, n_topics=10, chunks=3000, n_passes=3, n_jobs=3):
-        lda_file = os.path.join(self.tmp_folder, 'lda_model')
+    def build_lda_model(self, n_topics=5, chunks=10000,
+                        n_passes=25, n_jobs=3, bow=True):
+        if bow:
+            lda_file = os.path.join(self.tmp_folder, 'lda_model_bow.mdl')
+        else:
+            lda_file = os.path.join(self.tmp_folder, 'lda_model_tfidf.mdl')
+
         if os.path.isfile(lda_file):
             lda_model = gensim.models.LdaModel.load(lda_file)
         else:
@@ -30,8 +36,12 @@ class TopicModels(object):
             lda_model.save(lda_file)
         return lda_model
 
-    def build_lda_corpus(self, n_topics=10, passes=3, n_jobs=3):
-        lda_file = os.path.join(self.tmp_folder, 'lda_corpus.mm')
+    def build_lda_corpus(self, n_topics=5, passes=25, n_jobs=3, bow=True):
+        if bow:
+            lda_file = os.path.join(self.tmp_folder, 'lda_corpus_bow.mm')
+        else:
+            lda_file = os.path.join(self.tmp_folder, 'lda_corpus_tfidf.mm')
+
         if os.path.isfile(lda_file):
             lda_corpus = gensim.corpora.mmcorpus.MmCorpus(lda_file)
         else:
@@ -42,7 +52,7 @@ class TopicModels(object):
             gensim.corpora.MmCorpus.serialize(lda_file, lda_corpus)
         return lda_corpus
 
-    def build_hdp_model(self, max_topics=150, chunks=3000):
+    def build_hdp_model(self, max_topics=14, chunks=10000):
         hdp_file = os.path.join(self.tmp_folder, 'hdp_model')
         if os.path.isfile(hdp_file):
             hdp_model = gensim.models.HdpModel.load(hdp_file)
@@ -56,7 +66,7 @@ class TopicModels(object):
             hdp_model.save(hdp_file)
         return hdp_model
 
-    def build_hdp_corpus(self, max_topics=150, chunks=3000):
+    def build_hdp_corpus(self, max_topics=14, chunks=10000):
         hdp_file = os.path.join(self.tmp_folder, 'hdp_corpus')
         if os.path.isfile(hdp_file):
             hdp_corpus = gensim.corpora.mmcorpus.MmCorpus(hdp_file)
@@ -69,19 +79,18 @@ class TopicModels(object):
         return hdp_corpus
 
 if __name__ == '__main__':
-    from lib.topicModels.vector_models import VectorModels
+    from lib.topic_models.vector_models import VectorModels
 
     start_corpus = time()
-    cwd = os.getcwd()
-    data_folder = os.path.join(cwd, 'tmp', 'testFiles', '*')
-    tmp_folder = os.path.join(cwd, 'tmp', 'modeldir')
+    data_loc = os.path.join(settings.project_root, 'tmp', 'text_corpus.dat')
+    tmp_folder = os.path.join(settings.project_root, 'tmp', 'modeldir')
 
-    vectors = VectorModels(data_folder, tmp_folder)
+    vectors = VectorModels(data_loc, tmp_folder)
     corpus, dictionary = vectors.load_corpus()
-    tfidf_corpus = vectors.build_tfidf_corpus(corpus, dictionary)
+    # tfidf_corpus = vectors.build_tfidf_corpus(corpus, dictionary)
 
-    semantic = TopicModels(tmp_folder, tfidf_corpus, dictionary)
-    semantic.build_hdp_corpus()
+    semantic = TopicModels(tmp_folder, corpus, dictionary)
+    semantic.build_lda_corpus()
 
     stop_corpus = time()
     corpus_time = round(stop_corpus - start_corpus, 3)
