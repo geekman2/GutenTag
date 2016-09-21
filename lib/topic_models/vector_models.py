@@ -14,9 +14,8 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
 
 class MyCorpus(gensim.corpora.TextCorpus):
     def get_texts(self):
-        for item in self.input:
-            f = open(item, 'r').read()
-            yield self.tokenizer(f)
+        for item in self.input.readlines():
+            yield self.tokenizer()
 
     def tokenizer(self, doc, stem=True):
         if not stem:
@@ -45,7 +44,7 @@ class VectorModels(object):
         else:
             return np.random.choice(file_list, self.sample_size, replace=False)
 
-    def build_corpus(self, no_below=5, no_above=0.5):
+    def build_corpus(self, no_below=5, no_above=0.75):
         mycorpus = MyCorpus(self._get_file_list())
         mycorpus = self.filter_stopwords(mycorpus, self.stopwords)
 
@@ -67,7 +66,7 @@ class VectorModels(object):
         mycorpus.dictionary.compactify()
         return mycorpus
 
-    def load_corpus(self, no_below=5, no_above=0.5):
+    def load_corpus(self, no_below=5, no_above=0.75):
         corpus_file = os.path.join(self.tmp_folder, 'corpus.mm')
         dictionary_file = os.path.join(self.tmp_folder, 'corpus.dict')
         if os.path.isfile(corpus_file) and os.path.isfile(dictionary_file):
