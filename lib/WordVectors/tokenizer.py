@@ -7,11 +7,9 @@
 # Copyright:    (c) Bharat Ramanathan, Devon Muraoka
 # ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-import lib.WordVectors.parser
 from spacy.en import English
-from time import time
 from itertools import izip
-import var.settings as settings
+import settings
 import cProfile
 import pstats
 

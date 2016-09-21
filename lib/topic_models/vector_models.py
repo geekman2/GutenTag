@@ -14,8 +14,6 @@ logger = logging.getLogger('text_similar')
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
-additional_stops = pre_process.STOPWORDS
-
 
 class VectorModels(object):
     def __init__(self, data_loc, tmp_folder,

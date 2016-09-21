@@ -1,3 +1,11 @@
+# coding = utf-8
+# ------------------------------------------------------------------------------
+# Name:         Create Corpus
+# Purpose:      Create Corpus #TODO improve this description
+# Author:       Bharat Ramanathan, Devon Muraoka
+# Created:      9/6/2016
+# Copyright:    (c) Bharat Ramanathan, Devon Muraoka
+# ------------------------------------------------------------------------------
 import gensim
 import logging
 import os

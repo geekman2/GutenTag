@@ -1,15 +1,23 @@
+# coding = utf-8
+# ------------------------------------------------------------------------------
+# Name:         Create corpus models
+# Purpose:      Create corpus models#TODO improve this description
+# Author:       Bharat Ramanathan, Devon Muraoka
+# Created:      9/6/2016
+# Copyright:    (c) Bharat Ramanathan, Devon Muraoka
+# ------------------------------------------------------------------------------
 from __future__ import print_function, absolute_import
-import lib.WordVectors.parser as mongoClient
+import settings
 import os
-
 import logging
 import gensim
+
 
 logger = logging.getLogger('text_similar')
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
-cwd = os.getcwd()
+cwd = settings.project_root
 working_directory = os.path.join(cwd,'tmp','modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)
@@ -17,7 +25,7 @@ if not os.path.exists(working_directory):
 
 class CorpusModel(object):
     def get_texts(self):
-        self.cur = mongoClient.docs.find({'text': {'$exists': 1}}, {'text': 1, '_id': 0}).batch_size(1000)
+        self.cur = settings.docs.find({'text': {'$exists': 1}}, {'text': 1, '_id': 0}).batch_size(10000)
         for doc in self.cur:
             yield doc['text']
 

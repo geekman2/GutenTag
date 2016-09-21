@@ -10,7 +10,9 @@ from __future__ import print_function, absolute_import
 import pymongo
 import lib.WordVectors.language_filter
 import multiprocessing
-import var.settings as settings
+
+import lib.WordVectors.language_filter
+import settings as settings
 
 if settings.debug == True:
     import time

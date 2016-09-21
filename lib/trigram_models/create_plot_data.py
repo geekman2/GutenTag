@@ -2,8 +2,9 @@ import logging
 import os
 import numpy as np
 import sklearn.manifold as manifold
+import settings
 
-cwd = os.getcwd()
+cwd = settings.project_root
 working_directory = os.path.join(cwd,'tmp','modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)

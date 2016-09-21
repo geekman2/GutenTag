@@ -1,11 +1,20 @@
+# coding = utf-8
+# ------------------------------------------------------------------------------
+# Name:         Create plots
+# Purpose:      Create plots#TODO improve this description
+# Author:       Bharat Ramanathan, Devon Muraoka
+# Created:      9/6/2016
+# Copyright:    (c) Bharat Ramanathan, Devon Muraoka
+# ------------------------------------------------------------------------------
 import pandas as pd
 import logging
 import os
 from matplotlib import pylab as plt
 import seaborn as sns
+import settings
 sns.set(color_codes=True)
 
-cwd = os.getcwd()
+cwd = settings.project_root
 working_directory = os.path.join(cwd,'tmp','modeldir')
 if not os.path.exists(working_directory):
     os.makedirs(working_directory)
