@@ -115,3 +115,4 @@ if __name__ == '__main__':
 
     clustering = Clusterer(tmp_folder,tfidf_corpus, n_docs=tfidf_corpus.num_docs)
     k_labels = clustering.mini_k_clusters(k=5, corpus_type='tfidf')
+    print k_labels
