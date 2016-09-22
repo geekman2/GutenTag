@@ -26,16 +26,17 @@ class DistanceMetrics(object):
         self.corpus = corpus
 
     def build_cosine_similarity_index(self):
-        output_prefix = os.path.join(self.tmp_dir,'cosine_shard')
+        output_prefix = os.path.join(self.tmp_dir, 'cosine_shard')
         sim_index_file = os.path.join(self.tmp_dir, 'cosine_index')
         if os.path.isfile(sim_index_file):
-            sim_index = gensim.similarities.docsim.Similarity.load(sim_index_file)
+            sim_index = gensim.similarities.Similarity.load(sim_index_file)
         else:
-            sim_index = gensim.similarities.docsim.Similarity(output_prefix=output_prefix,
-                                                              corpus=self.corpus,
-                                                              num_features=self.n_terms,
-                                                              num_best=self.n_docs
-                                                              )
+            params = {'output_prefix': output_prefix,
+                      'corpus': self.corpus,
+                      'num_features': self.n_terms,
+                      'num_best': self.n_docs
+                      }
+            sim_index = gensim.similaritiesSimilarity(**params)
             sim_index.save(sim_index_file)
         return sim_index
 
@@ -48,7 +49,7 @@ class DistanceMetrics(object):
         return sparse_corpus
 
     def build_jaccard_sim(self):
-        mat = get_sparse_matrix()
+        mat = self.get_sparse_matrix()
         cols_sum = mat.getnnz(axis=0)
         ab = mat.T * mat
 
@@ -84,5 +85,3 @@ if __name__ == '__main__':
     stop_corpus = time()
     corpus_time = round(stop_corpus - start_corpus, 3)
     logger.info('time taken to build corpus = {}s'.format(corpus_time))
-    for sim in sims:
-        print(sim)
