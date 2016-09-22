@@ -47,7 +47,8 @@ class TopicModels(object):
         else:
             lda_model = self.build_lda_model(n_topics=n_topics,
                                              n_passes=passes,
-                                             n_jobs=n_jobs)
+                                             n_jobs=n_jobs,
+                                             bow=bow)
             lda_corpus = lda_model[self.corpus]
             gensim.corpora.MmCorpus.serialize(lda_file, lda_corpus)
         return lda_corpus
@@ -87,10 +88,10 @@ if __name__ == '__main__':
 
     vectors = VectorModels(data_loc, tmp_folder)
     corpus, dictionary = vectors.load_corpus()
-    # tfidf_corpus = vectors.build_tfidf_corpus(corpus, dictionary)
+    tfidf_corpus = vectors.build_tfidf_corpus(corpus, dictionary)
 
-    semantic = TopicModels(tmp_folder, corpus, dictionary)
-    semantic.build_lda_corpus()
+    semantic = TopicModels(tmp_folder, tfidf_corpus, dictionary)
+    semantic.build_lda_corpus(bow=False)
 
     stop_corpus = time()
     corpus_time = round(stop_corpus - start_corpus, 3)
