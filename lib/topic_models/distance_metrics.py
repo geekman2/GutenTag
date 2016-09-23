@@ -1,3 +1,4 @@
+# coding = utf-8
 import os
 
 import gensim
@@ -16,127 +17,74 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
 
-def jensen_shannon(u, v):
-    _u = u / norm(u, ord=1)
-    _v = v / norm(v, ord=1)
-    _M = 0.5 * (_u + _v)
-    d = 0.5 * (entropy(_u, _M) + entropy(_v, _M))
-    if np.isinf(d):
-        d = 0
-    return d
-
-
-def kullback_leibler(u, v):
-    d = gensim.matutils.kullback_leibler(u, v)
-    if np.isinf(d):
-        d = 0
-    return d
-
-
 class DistanceMetrics(object):
     def __init__(self, tmp_dir, corpus):
         self.tmp_dir = tmp_dir
         self.n_docs = corpus.num_docs
         self.n_terms = corpus.num_terms
-        self.corpus = self._get_corpus_mmap(corpus)
+        self.n_nnz = corpus.num_nnz
+        self.corpus = corpus
 
-    def _read_mmap(self, map_file, shape, dtype='float32'):
-        return np.memmap(map_file, dtype=dtype, shape=shape, mode='r+')
-
-    def _write_mmap(self, map_file, shape, dtype='float32'):
-        return np.memmap(map_file, dtype=dtype, shape=shape, mode='w+')
-
-    def _get_corpus_mmap(self, corpus):
-        corpus_map_file = os.path.join(self.tmp_dir, 'corpus_map.mmep')
-        if os.path.isfile(corpus_map_file):
-            corpus_map = self._read_mmap(map_file=corpus_map_file,
-                                         shape=(self.n_terms, self.n_docs)
-                                         )
-        else:
-            corpus_map = self._write_mmap(map_file=corpus_map_file,
-                                          shape=(self.n_terms, self.n_docs)
-                                          )
-            params = {'corpus': corpus,
-                      'num_terms': self.n_terms,
-                      'num_docs': self.n_docs
-                      }
-            corpus_map[:] = gensim.matutils.corpus2dense(**params)
-        return corpus_map.T
-
-    def _jensen_shannon(u, v):
-        _u = u / norm(u, ord=1)
-        _v = v / norm(v, ord=1)
-        _M = 0.5 * (_u + _v)
-        return 0.5 * (entropy(_u, _M) + entropy(_v, _M))
-
-    def _get_metric_config(self, metric, fout=False):
-        default_dict = {'X': self.corpus,
-                        'n_jobs': -1
-                        }
-        config_dict = {'jensen_shannon': jensen_shannon,
-                       'cosine': 'cosine',
-                       'jaccard': 'jaccard',
-                       'kullback_leibler': kullback_leibler,
-                       'hellinger': gensim.matutils.hellinger,
-                       }
-        default_dict['metric'] = config_dict[metric]
-        if fout:
-            default_dict['fname'] = metric+'.idx'
-        return default_dict
-
-    def build_similarity_index(self, distance_metric='jensen_shannon'):
-        params = self._get_metric_config(distance_metric)
-        return pairwise_distances(**params)
-
-    def load_similarity_index(self, metric='jensen_shannon'):
-        file_path = self._get_metric_config(metric, fout=True)['fname']
-        sim_index_file = os.path.join(self.tmp_dir, file_path)
+    def build_cosine_similarity_index(self, type='bow'):
+        output_prefix = os.path.join(self.tmp_dir, '{}_cosine_shard'.format(type))
+        sim_index_file = os.path.join(self.tmp_dir, '{}_cosine_index'.format(type))
         if os.path.isfile(sim_index_file):
-            sim_index = self._read_mmap(sim_index_file,
-                                        shape=(self.n_docs, self.n_docs)
-                                        )
+            sim_index = gensim.similarities.Similarity.load(sim_index_file)
         else:
-            sim_index = self._write_mmap(sim_index_file,
-                                         shape=(self.n_docs, self.n_docs)
-                                         )
-            sim_index[:] = self.build_similarity_index(metric)
+            params = {'output_prefix': output_prefix,
+                      'corpus': self.corpus,
+                      'num_features': self.n_terms,
+                      'num_best': self.n_docs
+                      }
+            sim_index = gensim.similarities.Similarity(**params)
+            sim_index.save(sim_index_file)
         return sim_index
+
+    def get_sparse_matrix(self):
+        sparse_corpus = gensim.matutils.corpus2csc(corpus=self.corpus,
+                                                   num_terms=self.n_terms,
+                                                   num_docs=self.n_docs,
+                                                   num_nnz=self.n_nnz
+                                                   )
+        return sparse_corpus
+
+    def build_jaccard_sim(self):
+        mat = self.get_sparse_matrix()
+        cols_sum = mat.getnnz(axis=0)
+        ab = mat.T * mat
+
+        # for rows
+        aa = np.repeat(cols_sum, ab.getnnz(axis=0))
+        # for columns
+        bb = cols_sum[ab.indices]
+
+        similarities = ab.copy()
+        similarities.data /= (aa + bb - ab.data)
+
+        return similarities
 
 
 if __name__ == '__main__':
-    from lib.topicModels.vector_models import VectorModels
-    from lib.topicModels.semantic_models import TopicModels
+    from lib.topic_models.vector_models import VectorModels
+    from lib.topic_models.semantic_models import TopicModels
 
     start_corpus = time()
     cwd = os.getcwd()
-    data_folder = os.path.join(cwd, 'tmp', 'testFiles', '*')
+    data_loc = os.path.join(cwd, 'tmp', 'text_corpus.dat', )
     tmp_folder = os.path.join(cwd, 'tmp', 'modeldir')
 
-    vectors = VectorModels(data_folder, tmp_folder)
+    vectors = VectorModels(data_loc, tmp_folder)
     corpus, dictionary = vectors.load_corpus()
     tfidf_corpus = vectors.build_tfidf_corpus(corpus, dictionary)
 
     semantic = TopicModels(tmp_folder, tfidf_corpus, dictionary)
-    lda_corpus = semantic.build_lda_corpus()
-    hdp_corpus = semantic.build_hdp_corpus()
+    lda_corpus = semantic.build_lda_corpus(bow=False)
 
-    lda_metrics = DistanceMetrics(tmp_folder, lda_corpus)
+    metrics = DistanceMetrics(tmp_dir=tmp_folder, corpus=lda_corpus)
+    sims = metrics.build_cosine_similarity_index(type='tdidf_lda')
 
-    lda_hellidx = lda_metrics.load_similarity_index(metric='hellinger')
-    lda_jensen_shannonidx = lda_metrics.load_similarity_index(
-        metric='jensen_shannon')
-    lda_kullback_leibleridx = lda_metrics.load_similarity_index(
-        metric='kullback_leibler')
-
-    hdp_metrics = DistanceMetrics(tmp_folder, hdp_corpus)
-    hdp_hellidx = hdp_metrics.load_similarity_index(metric='hellinger')
-    hdp_jensen_shannonidx = hdp_metrics.load_similarity_index(
-        metric='jensen_shannon')
-    hdp_kullback_leibleridx = hdp_metrics.load_similarity_index(
-        metric='kullback_leibler')
-
-    # print(metrics.corpus.sum(axis=1))
-
+    sims = gensim.matutils.corpus2csc(sims,num_terms=100000, dtype=np.float32, num_docs=100000, printprogress=1)
+    print(sims)
     stop_corpus = time()
     corpus_time = round(stop_corpus - start_corpus, 3)
     logger.info('time taken to build corpus = {}s'.format(corpus_time))

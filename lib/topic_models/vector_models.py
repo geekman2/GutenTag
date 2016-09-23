@@ -1,8 +1,11 @@
+# -*- coding: utf8 -*-
 import os
-from glob import glob
 import gensim
 from nltk.corpus import stopwords
-import numpy as np
+
+
+import settings
+from lib.topic_models import pre_process
 
 from time import time
 import logging
@@ -11,42 +14,18 @@ logger = logging.getLogger('text_similar')
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                     level=logging.INFO)
 
-
-class MyCorpus(gensim.corpora.TextCorpus):
-    def get_texts(self):
-        for item in self.input:
-            f = open(item, 'r').read()
-            yield self.tokenizer(f)
-
-    def tokenizer(self, doc, stem=True):
-        if not stem:
-            return gensim.utils.tokenize(doc,
-                                         lowercase=True,
-                                         deacc=True,
-                                         errors='strict'
-                                         )
-        else:
-            return gensim.parsing.preprocessing.preprocess_string(doc)
-
+additional_stops = pre_process.STOPWORDS
 
 class VectorModels(object):
-    def __init__(self, data_folder, tmp_folder,
-                 stopwords=set(), sample_size=None):
+    def __init__(self, data_loc, tmp_folder,
+                 stopwords=additional_stops, sample_size=None):
 
-        self.data_folder = data_folder
+        self.data_loc = data_loc
         self.tmp_folder = tmp_folder
         self.stopwords = stopwords
-        self.sample_size = sample_size
 
-    def _get_file_list(self):
-        file_list = glob(self.data_folder)
-        if not self.sample_size:
-            return file_list
-        else:
-            return np.random.choice(file_list, self.sample_size, replace=False)
-
-    def build_corpus(self, no_below=5, no_above=0.5):
-        mycorpus = MyCorpus(self._get_file_list())
+    def build_corpus(self, no_below=5, no_above=0.75):
+        mycorpus = pre_process.MyCorpus(self.data_loc)
         mycorpus = self.filter_stopwords(mycorpus, self.stopwords)
 
         mycorpus.dictionary.filter_extremes(no_below=no_below,
@@ -56,18 +35,23 @@ class VectorModels(object):
         mycorpus.dictionary.compactify()
         return mycorpus, mycorpus.dictionary
 
-    def filter_stopwords(self, mycorpus, additional_stopwords=set()):
+    def filter_stopwords(self, mycorpus,
+                         additional_stopwords=additional_stops):
         stopset = set(stopwords.words('english')).union(additional_stopwords)
 
         stop_ids = [mycorpus.dictionary.token2id[stopword]
                     for stopword in stopset
                     if stopword in mycorpus.dictionary.token2id]
 
-        mycorpus.dictionary.filter_tokens(stop_ids)
+        remove_ids = [mycorpus.dictionary.token2id[token]
+                      for token in mycorpus.dictionary.itervalues()
+                      if len(token) < 3]
+
+        mycorpus.dictionary.filter_tokens(stop_ids + remove_ids)
         mycorpus.dictionary.compactify()
         return mycorpus
 
-    def load_corpus(self, no_below=5, no_above=0.5):
+    def load_corpus(self, no_below=5, no_above=0.75):
         corpus_file = os.path.join(self.tmp_folder, 'corpus.mm')
         dictionary_file = os.path.join(self.tmp_folder, 'corpus.dict')
         if os.path.isfile(corpus_file) and os.path.isfile(dictionary_file):
@@ -108,11 +92,10 @@ class VectorModels(object):
 if __name__ == '__main__':
     # Build the Corpus
     start_corpus = time()
-    cwd = os.getcwd()
-    data_folder = os.path.join(cwd, 'tmp', 'test_files', '*')
-    tmp_folder = os.path.join(cwd, 'tmp', 'modeldir')
+    data_loc = os.path.join(settings.project_root, 'tmp', 'text_corpus.dat')
+    tmp_folder = os.path.join(settings.project_root, 'tmp', 'modeldir')
 
-    vectors = VectorModels(data_folder, tmp_folder)
+    vectors = VectorModels(data_loc, tmp_folder)
     corpus, dictionary = vectors.load_corpus()
     vectors.build_tfidf_corpus(corpus, dictionary)
 
