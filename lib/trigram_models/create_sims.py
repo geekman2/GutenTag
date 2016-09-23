@@ -34,6 +34,7 @@ class SimilarityModel(object):
         elif tfidf and not model:
             self.sim_index_file = os.path.join(working_directory,'tfidf_simFile.idx')
             self.simIndexPrefix = os.path.join(working_directory,'tfidf_simidx')
+        logger.info("INDEX FILE LOCATION:{}".format(self.sim_index_file))
 
     def load_sim_index(self, n_features=None, n_best=None):
         """
