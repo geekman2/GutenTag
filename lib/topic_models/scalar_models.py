@@ -13,12 +13,8 @@ class DimeReducer(object):
                            n_jobs=-1,
                            random_state=1
                            )
-        mds.fit(data)
-        return mds
-
-    def reduce_data(self, model, data):
-        reduced_data = model.transform(data)
-        return reduced_data
+        data = mds.fit_transform(data)
+        return data
 
 
 if __name__ == '__main__':
@@ -41,12 +37,11 @@ if __name__ == '__main__':
     metrics = DistanceMetrics(tmp_dir=tmp_folder, corpus=lda_corpus)
     sims = metrics.build_cosine_similarity_index()
 
+
     reducer = DimeReducer(sims)
-    reducer_model = reducer.get_mds_scalar(sims)
-    reduced_data = reducer.reduce_data(reducer_model, sims)
+    reduced_data = reducer.get_mds_scalar(sims)
 
     print(reduced_data)
-
     stop_corpus = time()
     corpus_time = round(stop_corpus - start_corpus, 3)
     logger.info('time taken to build corpus = {}s'.format(corpus_time))

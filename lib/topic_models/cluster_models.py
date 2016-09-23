@@ -2,6 +2,8 @@ import os
 import numpy as np
 from sklearn import cluster
 import gensim
+import cPickle as pickle
+import settings
 
 from time import time
 import logging
@@ -25,16 +27,18 @@ class Clusterer(object):
     def numpize(self, chunk):
         return gensim.matutils.corpus2dense(corpus=chunk,
                                             num_docs=len(chunk),
-                                            num_terms=corpus.num_terms)
+                                            num_terms=self.doc_vecs.num_terms)
 
     def mini_k_clusters(self, k=5, corpus_type=None):
         cluster_file = os.path.join(self.tmp_folder, '{}_{}_clusters'.format(corpus_type, k))
-        if os.path.isfile(cluster_file):
+        model_file = os.path.join(self.tmp_folder,'{}_{}_model'.format(corpus_type, k))
+        if os.path.isfile(cluster_file) and os.path.isfile(model_file):
             k_labels = np.memmap(cluster_file,
                                  dtype='float32',
                                  mode='r+',
                                  shape=(self.n_docs,)
                                  )
+            k_means = pickle.load(open(model_file, 'rb'))
         else:
             params = {'n_clusters': k,
                       'max_iter': 150,
@@ -68,10 +72,11 @@ class Clusterer(object):
                 k_labels[i:i+labels.shape[0]] = labels
                 i += labels.shape[0]
                 j += 1
-        return k_labels
+            pickle.dump(k_means,open(model_file, 'wb'))
+        return k_labels, k_means
 
-    def dbscan_clusters(self, dist=0.1, n_samples=10):
-        cluster_file = os.path.join(self.tmp_folder, 'k_clusters')
+    def dbscan_clusters(self, dist=0.1, n_samples=10, type=None):
+        cluster_file = os.path.join(self.tmp_folder, 'db_clusters')
         if os.path.isfile(cluster_file):
             db_labels = np.memmap(cluster_file,
                                   dtype='float32',
@@ -102,9 +107,8 @@ if __name__ == '__main__':
     from lib.topic_models.semantic_models import TopicModels
 
     start_corpus = time()
-    cwd = os.getcwd()
-    data_loc = os.path.join(cwd, 'tmp', 'text_corpus.dat', )
-    tmp_folder = os.path.join(cwd, 'tmp', 'modeldir')
+    data_loc = os.path.join(settings.project_root, 'tmp', 'text_corpus.dat', )
+    tmp_folder = os.path.join(settings.project_root, 'tmp', 'modeldir')
 
     vectors = VectorModels(data_loc, tmp_folder)
     corpus, dictionary = vectors.load_corpus()
@@ -114,5 +118,6 @@ if __name__ == '__main__':
     lda_corpus = semantic.build_lda_corpus(bow=False)
 
     clustering = Clusterer(tmp_folder,tfidf_corpus, n_docs=tfidf_corpus.num_docs)
-    k_labels = clustering.mini_k_clusters(k=5, corpus_type='tfidf')
-    print k_labels
+    k_labels, k_means = clustering.mini_k_clusters(k=5, corpus_type='tfidf')
+    print (k_labels)
+    print (k_means.cluster_centers_)

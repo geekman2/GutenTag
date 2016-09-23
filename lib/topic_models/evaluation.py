@@ -1,48 +1,34 @@
-import os
-import cPickle as pickle
+from sklearn.metrics import adjusted_rand_score, v_measure_score
 import settings
-import shutil
-from joblib import Parallel, delayed
+import os
+import numpy as np
 
-tmp_dir = os.path.join(settings.project_root, 'tmp')
-raw_pickle = os.path.join(tmp_dir, 'One_Genre.pickle')
-final_labels = os.path.join(tmp_dir, 'final_labels.pickle')
-delete_files = os.path.join(tmp_dir, 'delete_labels.pickle')
-
-def make_files():
-    mapping_dict = {}
-    delete_list = []
-    with open(raw_pickle, 'r') as raw:
-        raw_labels = pickle.load(raw)
-        for item in raw_labels:
-            if item['genres']:
-                mapping_dict[str(item['_id'])] = item['genres'][0]
-            else:
-                delete_list.append(str(item['_id']))
-
-    with open(final_labels, 'wb') as f:
-        pickle.dump(mapping_dict, f)
-    with open(delete_files, 'wb') as f:
-        pickle.dump(delete_list, f)
+from time import time
 
 
-with open(delete_files, 'rb') as f:
-    delete_list = pickle.load(f)
-    delete_list = set(delete_list)
-
-def delete_filter(item):
-    global delete_list
-    if item in delete_list:
-        return True
-    else:
-        return False
+def get_labels():
+    labels_file = os.path.join(settings.project_root, 'tmp', 'text_labels.dat')
+    labels = [line.strip() for line in open(labels_file)]
+    map_dict = {key: value for value, key in enumerate(set(labels))}
+    labels = np.vectorize(map_dict.get)(np.array(labels))
+    return labels
 
 if __name__ == '__main__':
-    test_files = os.path.join(tmp_dir, 'test_files')
-    file_list = set(os.listdir(test_files))
-    # files = Parallel(n_jobs=3)(delayed(delete_filter)(item.split(".")[0]) for item in file_list)
+    from lib.topic_models.vector_models import VectorModels
+    from lib.topic_models.semantic_models import TopicModels
+    from lib.topic_models.cluster_models import Clusterer
+    start_corpus = time()
+    data_loc = os.path.join(settings.project_root, 'tmp', 'text_corpus.dat', )
+    tmp_folder = os.path.join(settings.project_root, 'tmp', 'modeldir')
 
-    files = [os.path.join(test_files,item+'.txt') for item in delete_list]
-    unlabelled = (os.path.join(tmp_dir, 'unlabelled_files'))
-    for f in files:
-        shutil.move(f, unlabelled)
+    vectors = VectorModels(data_loc, tmp_folder)
+    corpus, dictionary = vectors.load_corpus()
+    tfidf_corpus = vectors.build_tfidf_corpus(corpus, dictionary)
+
+    semantic = TopicModels(tmp_folder, tfidf_corpus, dictionary)
+    lda_corpus = semantic.build_lda_corpus(bow=False)
+
+    clustering = Clusterer(tmp_folder,lda_corpus, n_docs=lda_corpus.num_docs)
+    k_labels, k_means = clustering.mini_k_clusters(k=5, corpus_type='lda_tfidf')
+    print("Adjusted Rand Score = {}".format(adjusted_rand_score(get_labels(), k_labels)))
+    print("V Measure Score = {}".format(v_measure_score(get_labels(), k_labels)))

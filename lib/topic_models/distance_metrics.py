@@ -25,9 +25,9 @@ class DistanceMetrics(object):
         self.n_nnz = corpus.num_nnz
         self.corpus = corpus
 
-    def build_cosine_similarity_index(self):
-        output_prefix = os.path.join(self.tmp_dir, 'cosine_shard')
-        sim_index_file = os.path.join(self.tmp_dir, 'cosine_index')
+    def build_cosine_similarity_index(self, type='bow'):
+        output_prefix = os.path.join(self.tmp_dir, '{}_cosine_shard'.format(type))
+        sim_index_file = os.path.join(self.tmp_dir, '{}_cosine_index'.format(type))
         if os.path.isfile(sim_index_file):
             sim_index = gensim.similarities.Similarity.load(sim_index_file)
         else:
@@ -36,7 +36,7 @@ class DistanceMetrics(object):
                       'num_features': self.n_terms,
                       'num_best': self.n_docs
                       }
-            sim_index = gensim.similaritiesSimilarity(**params)
+            sim_index = gensim.similarities.Similarity(**params)
             sim_index.save(sim_index_file)
         return sim_index
 
@@ -81,7 +81,10 @@ if __name__ == '__main__':
     lda_corpus = semantic.build_lda_corpus(bow=False)
 
     metrics = DistanceMetrics(tmp_dir=tmp_folder, corpus=lda_corpus)
-    sims = metrics.build_cosine_similarity_index()
+    sims = metrics.build_cosine_similarity_index(type='tdidf_lda')
+
+    sims = gensim.matutils.corpus2csc(sims,num_terms=100000, dtype=np.float32, num_docs=100000, printprogress=1)
+    print(sims)
     stop_corpus = time()
     corpus_time = round(stop_corpus - start_corpus, 3)
     logger.info('time taken to build corpus = {}s'.format(corpus_time))
