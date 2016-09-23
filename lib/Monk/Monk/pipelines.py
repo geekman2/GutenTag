@@ -34,7 +34,7 @@ class MonkPipeline(object):
         for i in xrange(len(text) - n):
             yield text[i:i + n]
 
-    def generate_ngram_frequencies(self,text,n):
+    def generate_ngram_frequencies(self, text, n):
         n_grams = {}
         n_gram_frequencies = {}
         for ngram in self.generate_ngrams(text, n):

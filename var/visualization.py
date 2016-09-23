@@ -58,7 +58,7 @@ def get_distribution():
         plt.bar(X, frequency, align='center', width=0.5)
         plt.xticks(X, labels)
         locs, labels = plt.xticks()
-        plt.setp(labels, rotation=90)
+        plt.setp(labels, rotation=0)
         ymax = max(frequency) + 0.001
         plt.ylim(0, ymax)
         plt.title(genre)
