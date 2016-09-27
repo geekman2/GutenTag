@@ -15,8 +15,8 @@ class TopicModels(object):
         self.corpus = corpus
         self.dictionary = dictionary
 
-    def build_lda_model(self, n_topics=5, chunks=10000,
-                        n_passes=25, n_jobs=3, bow=True):
+    def build_lda_model(self, n_topics=5, chunks=25000,
+                        n_passes=100, n_jobs=6, bow=True):
         if bow:
             lda_file = os.path.join(self.tmp_folder, 'lda_model_bow.mdl')
         else:

@@ -3,7 +3,8 @@ from __future__ import print_function, absolute_import
 # from var.mongoSim import simMongoDb
 import os
 from time import time
-import WordVectors.parserfrom pprint import pprint
+import WordVectors.parserfrom
+from pprint import pprint
 from gensim.models.doc2vec import LabeledSentence
 from gensim.models import Doc2Vec
 

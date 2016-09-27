@@ -1,6 +1,6 @@
 # coding = utf-8
 import os
-
+import settings
 import gensim
 
 from sklearn.metrics import pairwise_distances
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     from lib.topic_models.semantic_models import TopicModels
 
     start_corpus = time()
-    cwd = os.getcwd()
+    cwd = settings.project_root
     data_loc = os.path.join(cwd, 'tmp', 'text_corpus.dat', )
     tmp_folder = os.path.join(cwd, 'tmp', 'modeldir')
 
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     metrics = DistanceMetrics(tmp_dir=tmp_folder, corpus=lda_corpus)
     sims = metrics.build_cosine_similarity_index(type='tdidf_lda')
 
-    sims = gensim.matutils.corpus2csc(sims,num_terms=100000, dtype=np.float32, num_docs=100000, printprogress=1)
+    sims = gensim.matutils.corpus2csc(sims, num_terms=100000, dtype=np.float32, num_docs=100000, printprogress=1)
     print(sims)
     stop_corpus = time()
     corpus_time = round(stop_corpus - start_corpus, 3)

@@ -29,4 +29,4 @@ if __name__ == '__main__':
     cur = simMongoDb(2)
     data = chain(prepData(cur))
     for item in data:
-        yield item+=
+        yield item
